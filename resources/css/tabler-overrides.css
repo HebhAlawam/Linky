@@ -1,0 +1,31 @@
+
+    @media (min-width: 992px) {
+        [dir="rtl"] .navbar-expand-lg.navbar-vertical ~ .navbar,
+        [dir="rtl"] .navbar-expand-lg.navbar-vertical ~ .page-wrapper {
+            margin-left: 0 !important;
+            margin-right: 15rem !important; /* إذا بدك محتوى ما يقرب من السايد */
+        }
+    }
+
+
+    /* Force close button to the left */
+.modal-header > .btn-close {
+  left: 0 !important;
+  right: auto !important;
+}
+
+/* Close button on the LEFT for specific alerts */
+.alert.alert-close-left{
+  position: relative;
+  padding-left: 2.75rem; /* مساحة للزر */
+}
+
+/* Force close to left side */
+.alert.alert-close-left > .btn-close{
+  position: absolute;
+  left: .75rem !important;
+  right: auto !important;
+  top: 50%;
+  transform: translateY(-50%);
+}
+

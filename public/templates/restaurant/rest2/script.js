@@ -1,0 +1,609 @@
+(() => {
+  const app = window.APP || { lang: 'ar', data: {} };
+  const data = app.data || {};
+  const page = data.page || {};
+  const settings = page.settings || {};
+  const categories = Array.isArray(data.categories) ? data.categories : [];
+  const links = Array.isArray(data.links) ? data.links : [];
+
+  const T = {
+    ar: {
+      all: 'الكل',
+      menuTitle: 'القائمة',
+      menuSubtitle: 'اختر من أصنافنا المميزة.',
+      heroCta: 'عرض القائمة',
+      contact: 'تواصل معنا',
+      contactSubtitle: 'نسعد بتواصلكم للطلب أو الاستفسار.',
+      infoEmpty: 'سيتم إضافة معلومات الموقع قريبًا.',
+      linksEmpty: 'سيتم إضافة وسائل التواصل قريبًا.',
+      allContactEmpty: 'سيتم إضافة معلومات التواصل قريبًا.',
+      openMap: 'فتح الخريطة',
+      address: 'العنوان',
+      hours: 'مواعيد العمل',
+      links: 'تواصل',
+      social: 'تابعنا',
+      order: 'اطلب',
+      modalOrder: 'اطلب عبر واتساب',
+      modalCall: 'اتصل للطلب',
+      priceOnRequest: 'السعر عند الطلب',
+      noItems: 'لا توجد عناصر بعد.',
+      rights: 'جميع الحقوق محفوظة.',
+      whatsappMessage: 'مرحبًا، أريد طلب: ',
+      fallbackTitle: 'Linky',
+      linkFallback: {
+        whatsapp: 'واتساب', phone: 'اتصال', email: 'بريد إلكتروني', map: 'الموقع',
+        website: 'الموقع الإلكتروني', custom: 'رابط', social: 'تابعنا'
+      }
+    },
+    en: {
+      all: 'All',
+      menuTitle: 'Menu',
+      menuSubtitle: 'Choose from our featured items.',
+      heroCta: 'View Menu',
+      contact: 'Contact Us',
+      contactSubtitle: 'Reach us for orders or inquiries.',
+      infoEmpty: 'Location details will be added soon.',
+      linksEmpty: 'Contact details will be added soon.',
+      allContactEmpty: 'Contact information will be added soon.',
+      openMap: 'Open Map',
+      address: 'Address',
+      hours: 'Working Hours',
+      links: 'Contact',
+      social: 'Follow Us',
+      order: 'Order',
+      modalOrder: 'Order via WhatsApp',
+      modalCall: 'Call to order',
+      priceOnRequest: 'Price on request',
+      noItems: 'No items yet.',
+      rights: 'All Rights Reserved.',
+      whatsappMessage: 'Hello, I would like to order: ',
+      fallbackTitle: 'Linky',
+      linkFallback: {
+        whatsapp: 'WhatsApp', phone: 'Call', email: 'Email', map: 'Location',
+        website: 'Website', custom: 'Link', social: 'Follow'
+      }
+    }
+  };
+
+  const contactTypes = ['phone', 'whatsapp', 'email', 'map', 'website', 'custom'];
+  const EMPTY_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+  let lang = localStorage.getItem('linky_rest2_lang') || app.lang || 'ar';
+  let activeCategory = 'all';
+  let activeModalItemId = null;
+
+  const $ = (id) => document.getElementById(id);
+  const clean = (value) => String(value || '').trim();
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>'"]/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+    }[char]));
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/`/g, '&#096;');
+  }
+
+  function getTranslated(source, field, fallback = '') {
+    const value = field ? source?.[field] : source;
+    if (value == null) return fallback;
+    if (typeof value === 'string') return value.trim() || fallback;
+    if (typeof value === 'object') {
+      return clean(value[lang]) || clean(value.ar) || clean(value.en) || clean(Object.values(value).find(Boolean)) || fallback;
+    }
+    return fallback;
+  }
+
+  function translationValue(source, field, locale) {
+    const value = source?.[field];
+    if (typeof value === 'object' && value !== null) {
+      return clean(value[locale]) || clean(value.ar) || clean(value.en) || clean(Object.values(value).find(Boolean));
+    }
+    return clean(value);
+  }
+
+  function localizedPrice(value, withFallback = false, locale = lang) {
+    let price = '';
+
+    if (value && typeof value === 'object') {
+      price = clean(value[locale]) || clean(value[locale === 'ar' ? 'en' : 'ar']) || clean(Object.values(value).find(Boolean));
+    } else if (typeof value === 'string') {
+      price = clean(value);
+    }
+
+    if (price || !withFallback) return price;
+
+    return locale === 'ar' ? T.ar.priceOnRequest : T.en.priceOnRequest;
+  }
+
+  function pageTitle() {
+    return getTranslated(page, 'title', T[lang].fallbackTitle);
+  }
+
+  function pageSlogan() {
+    return getTranslated(page, 'slogan', '');
+  }
+
+  function currentModalLang() {
+    return (document.getElementById('mainHtml')?.dir || document.documentElement.dir) === 'rtl' ? 'ar' : 'en';
+  }
+
+  function syncDirection() {
+    const html = document.getElementById('mainHtml') || document.documentElement;
+    html.lang = lang;
+    html.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    const toggle = $('langToggle');
+    if (toggle) toggle.textContent = lang === 'ar' ? 'English' : 'العربية';
+  }
+
+  function applyTheme() {
+    const html = document.getElementById('mainHtml') || document.documentElement;
+    const theme = localStorage.getItem('linky_rest2_theme') || 'light';
+    html.classList.toggle('dark', theme === 'dark');
+    updateThemeIcon();
+  }
+
+  function updateThemeIcon() {
+    const html = document.getElementById('mainHtml') || document.documentElement;
+    const icon = $('themeToggle')?.querySelector('i');
+    if (icon) icon.className = html.classList.contains('dark') ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  }
+
+  window.toggleTheme = function toggleTheme() {
+    const html = document.getElementById('mainHtml') || document.documentElement;
+    const isDark = html.classList.toggle('dark');
+    localStorage.setItem('linky_rest2_theme', isDark ? 'dark' : 'light');
+    updateThemeIcon();
+  };
+
+  window.toggleLanguage = function toggleLanguage() {
+    lang = lang === 'ar' ? 'en' : 'ar';
+    localStorage.setItem('linky_rest2_lang', lang);
+    syncDirection();
+    renderAll();
+  };
+
+  window.scrollToTop = function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  window.scrollToMenu = function scrollToMenu() {
+    document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  function heroImageUrl() {
+    const images = Array.isArray(settings.hero_images) ? settings.hero_images : [];
+    return images.map((image) => {
+      if (typeof image === 'string') return image;
+      if (image && typeof image === 'object') return image.url || image.image_url || image.src || '';
+      return '';
+    }).map(clean).find(Boolean) || '';
+  }
+
+  function renderBrand() {
+    const title = pageTitle();
+    const logo = clean(page.logo_url);
+    const navLogo = $('navLogo');
+    const navTitle = $('navTitle');
+
+    if (navTitle) {
+      navTitle.textContent = title;
+      navTitle.classList.remove('hidden');
+    }
+
+    if (navLogo) {
+      navLogo.src = EMPTY_IMAGE;
+      navLogo.alt = '';
+      navLogo.classList.add('hidden');
+      navLogo.onerror = null;
+    }
+
+    const footerLogo = $('footerLogo');
+    if (footerLogo) {
+      footerLogo.innerHTML = logo
+        ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(title)}" class="h-12 mx-auto object-contain">`
+        : `<span class="text-2xl font-black text-restaurant">${escapeHtml(title)}</span>`;
+    }
+
+    if ($('footerName')) $('footerName').textContent = title;
+  }
+
+  function renderHero() {
+    const heroCard = $('heroCard');
+    const heroImage = $('heroImage');
+    const imageUrl = heroImageUrl();
+
+    if ($('heroTitle')) $('heroTitle').textContent = pageTitle();
+    if ($('heroSlogan')) $('heroSlogan').textContent = pageSlogan();
+    setText('heroCtaText', T[lang].heroCta);
+
+    if (imageUrl && heroImage) {
+      heroImage.src = imageUrl;
+      heroImage.alt = pageTitle();
+      heroImage.classList.remove('hidden');
+      heroCard?.classList.remove('hero-fallback');
+    } else {
+      if (heroImage) {
+        heroImage.src = EMPTY_IMAGE;
+        heroImage.alt = '';
+        heroImage.classList.add('hidden');
+      }
+      heroCard?.classList.add('hero-fallback');
+    }
+  }
+
+  function allItems() {
+    return categories.flatMap((category) => (category.items || []).map((item) => ({ ...item, category })));
+  }
+
+  function sortItemsGlobally(items) {
+    return [...items].sort((a, b) => {
+      const featured = featuredRank(b) - featuredRank(a);
+      if (featured !== 0) return featured;
+
+      const order = Number(a.display_order || 0) - Number(b.display_order || 0);
+      if (order !== 0) return order;
+
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+  }
+
+  function featuredRank(item) {
+    return item?.is_featured === true || item?.is_featured === 1 || item?.is_featured === '1' ? 1 : 0;
+  }
+
+  function renderCategories() {
+    const wrap = $('categoryTabs');
+    if (!wrap) return;
+
+    setText('menuTitle', T[lang].menuTitle);
+    setText('menuSubtitle', T[lang].menuSubtitle);
+
+    wrap.classList.toggle('hidden', categories.length === 0);
+    if (!categories.length) {
+      wrap.innerHTML = '';
+      activeCategory = 'all';
+      return;
+    }
+
+    const tab = (key, label, selected) => `
+      <button type="button" data-category="${escapeAttr(key)}" class="${selected ? 'bg-restaurant text-white shadow-lg shadow-main' : 'bg-white text-gray-700 dark:bg-[#1a1a1a] dark:text-gray-200 shadow-sm border border-gray-100 dark:border-gray-800 hover:border-restaurant hover:text-restaurant'} px-8 py-3 rounded-2xl font-bold transition-all whitespace-nowrap">
+        ${escapeHtml(label)}
+      </button>`;
+
+    wrap.innerHTML = tab('all', T[lang].all, activeCategory === 'all') + categories.map((category) => {
+      const key = category.slug || String(category.id);
+      return tab(key, getTranslated(category, 'name'), activeCategory === key);
+    }).join('');
+
+    wrap.querySelectorAll('[data-category]').forEach((button) => {
+      button.addEventListener('click', () => {
+        activeCategory = button.getAttribute('data-category') || 'all';
+        renderCategories();
+        renderMenu();
+      });
+    });
+  }
+
+  function renderMenu() {
+    const grid = $('menuGrid');
+    if (!grid) return;
+
+    let items = allItems();
+    if (activeCategory !== 'all') {
+      items = items.filter((item) => (item.category?.slug || String(item.category?.id)) === activeCategory);
+    } else {
+      items = sortItemsGlobally(items);
+    }
+
+    if (!items.length) {
+      grid.innerHTML = `<div class="md:col-span-2 lg:col-span-3 rounded-[2rem] bg-white dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 p-10 text-center text-gray-500 dark:text-gray-400">${escapeHtml(T[lang].noItems)}</div>`;
+      return;
+    }
+
+    grid.innerHTML = items.map((item) => {
+      const titleAr = translationValue(item, 'title', 'ar');
+      const titleEn = translationValue(item, 'title', 'en');
+      const shortDescAr = translationValue(item, 'short_description', 'ar');
+      const shortDescEn = translationValue(item, 'short_description', 'en');
+      const fullDescAr = translationValue(item, 'description', 'ar') || shortDescAr;
+      const fullDescEn = translationValue(item, 'description', 'en') || shortDescEn;
+      const title = lang === 'ar' ? titleAr : titleEn;
+      const cardDescription = lang === 'ar' ? shortDescAr : shortDescEn;
+      const price = localizedPrice(item.price);
+      const priceText = localizedPrice(item.price, true);
+      const image = clean(item.image_url);
+      return `
+        <div onclick="openItemModal(this)" data-id="${escapeAttr(item.id)}" data-name="${escapeAttr(titleAr)}" data-name-en="${escapeAttr(titleEn)}" data-desc="${escapeAttr(fullDescAr)}" data-desc-en="${escapeAttr(fullDescEn)}" data-price="${escapeAttr(price)}" data-img="${escapeAttr(image)}" class="bg-white dark:bg-[#1a1a1a] p-4 rounded-[2rem] card-hover shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer overflow-hidden">
+          ${image
+            ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" class="w-full aspect-square object-cover rounded-[1.5rem] mb-5 pointer-events-none">`
+            : `<div class="w-full aspect-square rounded-[1.5rem] mb-5 hero-fallback flex items-center justify-center text-white pointer-events-none"><i class="fa-solid fa-utensils text-4xl opacity-80"></i></div>`}
+          <div class="px-2 pointer-events-none">
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <h3 class="text-xl font-black leading-7 text-start">${escapeHtml(title)}</h3>
+              <span class="text-restaurant font-black whitespace-nowrap text-lg">${escapeHtml(priceText)}</span>
+            </div>
+            <p class="text-gray-500 dark:text-gray-400 text-sm leading-7 mb-6 min-h-[52px] text-start">${escapeHtml(cardDescription)}</p>
+            <button type="button" class="w-full py-3 bg-restaurant text-white rounded-xl font-bold shadow-md shadow-main transition-all hover:bg-restaurant-hover">${escapeHtml(T[lang].order)}</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderContact() {
+    const address = getTranslated(settings.address, null, '');
+    const hours = getTranslated(settings.hours, null, '');
+    const contactLinks = links.filter((link) => contactTypes.includes(link.type) && clean(link.url));
+    const socialLinks = links.filter((link) => link.type === 'social' && clean(link.url));
+
+    setText('contactTitle', T[lang].contact);
+    setText('contactSubtitle', T[lang].contactSubtitle);
+    setText('addressTitle', T[lang].address);
+    setText('hoursTitle', T[lang].hours);
+    setText('linksTitle', T[lang].links);
+    setText('rightsText', T[lang].rights);
+
+    const hasAnyContactData = contactLinks.length > 0 || Boolean(address) || Boolean(hours);
+
+    toggleCard('contactLinksRow', hasAnyContactData || contactLinks.length === 0);
+    const contactWrap = $('contactLinks');
+    if (contactWrap) {
+      contactWrap.innerHTML = contactLinks.map((link) => contactPill(link)).join('');
+    }
+
+    const linksEmpty = $('contactLinksEmpty');
+    if (linksEmpty) {
+      linksEmpty.textContent = T[lang].linksEmpty;
+      linksEmpty.classList.toggle('hidden', contactLinks.length > 0 || !hasAnyContactData);
+    }
+
+    toggleCard('addressRow', Boolean(address));
+    setText('addressText', address);
+
+    toggleCard('hoursRow', Boolean(hours));
+    setText('hoursText', hours);
+
+    const allEmpty = $('contactAllEmpty');
+    if (allEmpty) {
+      allEmpty.textContent = T[lang].allContactEmpty;
+      allEmpty.classList.toggle('hidden', hasAnyContactData);
+    }
+
+    const footerSocial = $('footerSocialLinks');
+    if (footerSocial) {
+      footerSocial.innerHTML = socialLinks.map((link) => `
+        <li><a href="${escapeAttr(link.url)}" target="_blank" rel="noopener" data-track-link="${escapeAttr(link.id)}" aria-label="${escapeAttr(linkTitle(link))}" class="text-gray-400 hover:text-restaurant transition text-2xl"><i class="${escapeAttr(iconClass(link))}"></i></a></li>
+      `).join('');
+      footerSocial.classList.toggle('hidden', socialLinks.length === 0);
+    }
+
+    document.querySelectorAll('[data-track-link]').forEach((element) => {
+      element.onclick = () => trackLinkClick(element.getAttribute('data-track-link'));
+    });
+  }
+
+  function contactPill(link) {
+    const classes = link.type === 'whatsapp'
+      ? 'bg-restaurant text-white hover:bg-restaurant-hover shadow-sm shadow-main'
+      : 'bg-gray-50 text-gray-700 hover:border-restaurant hover:text-restaurant border border-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700';
+
+    return `
+      <a href="${escapeAttr(link.url)}" target="_blank" rel="noopener" data-track-link="${escapeAttr(link.id)}" class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition whitespace-nowrap ${classes}">
+        <i class="${escapeAttr(iconClass(link))}"></i>
+        <span>${escapeHtml(linkTitle(link))}</span>
+      </a>`;
+  }
+  function renderFooter() {
+    setText('footerSlogan', pageSlogan());
+    setText('year', new Date().getFullYear());
+  }
+
+  function setText(id, value) {
+    const element = $(id);
+    if (element) element.textContent = value || '';
+  }
+
+  function toggleCard(id, visible) {
+    const element = $(id);
+    if (element) element.classList.toggle('hidden', !visible);
+  }
+
+  function linkTitle(link) {
+    return getTranslated(link, 'title', T[lang].linkFallback[link.type] || T[lang].linkFallback.custom);
+  }
+
+  function sanitizeIconClass(value) {
+    return clean(value).replace(/[^a-zA-Z0-9_\-\s]/g, '');
+  }
+
+  function iconClass(link) {
+    const sanitized = sanitizeIconClass(link.icon || '');
+    if (sanitized.startsWith('ti ')) return faIconFromTabler(sanitized) || fallbackIconClass(link.type);
+    return sanitized || fallbackIconClass(link.type);
+  }
+
+  function faIconFromTabler(icon) {
+    const map = {
+      'brand-whatsapp': 'fa-brands fa-whatsapp',
+      'brand-instagram': 'fa-brands fa-instagram',
+      'brand-facebook': 'fa-brands fa-facebook',
+      'brand-tiktok': 'fa-brands fa-tiktok',
+      'brand-x': 'fa-brands fa-x-twitter',
+      'brand-twitter': 'fa-brands fa-x-twitter',
+      'brand-youtube': 'fa-brands fa-youtube',
+      phone: 'fa-solid fa-phone',
+      mail: 'fa-solid fa-envelope',
+      'map-pin': 'fa-solid fa-location-dot',
+      world: 'fa-solid fa-globe',
+      link: 'fa-solid fa-link',
+      share: 'fa-solid fa-share-nodes'
+    };
+    const key = Object.keys(map).find((name) => icon.includes(name));
+    return key ? map[key] : '';
+  }
+
+  function fallbackIconClass(type) {
+    return {
+      whatsapp: 'fa-brands fa-whatsapp',
+      phone: 'fa-solid fa-phone',
+      email: 'fa-solid fa-envelope',
+      map: 'fa-solid fa-location-dot',
+      website: 'fa-solid fa-globe',
+      custom: 'fa-solid fa-link',
+      social: 'fa-solid fa-share-nodes'
+    }[type] || 'fa-solid fa-link';
+  }
+
+  window.openItemModal = function openItemModal(card) {
+    if (!card) return;
+    const modalLang = currentModalLang();
+    const isArabic = modalLang === 'ar';
+    const name = clean(card.dataset[isArabic ? 'name' : 'nameEn']) || clean(card.dataset.name);
+    const desc = clean(card.dataset[isArabic ? 'desc' : 'descEn']) || clean(card.dataset.desc);
+    const price = clean(card.dataset.price);
+    const priceText = price || T[modalLang].priceOnRequest;
+    const img = clean(card.dataset.img);
+    activeModalItemId = card.dataset.id || null;
+
+    setText('modalItemName', name);
+    setText('modalItemDesc', desc);
+    setText('modalItemPrice', priceText);
+    setText('modalOrderText', T[modalLang].modalOrder);
+
+    const image = $('modalItemImg');
+    if (image) {
+      image.src = img || EMPTY_IMAGE;
+      image.alt = name;
+      image.classList.toggle('hidden', !img);
+    }
+
+    const orderLink = $('modalOrderLink');
+    const orderTarget = modalOrderTarget(name, price, modalLang);
+    if (orderLink && orderTarget.url) {
+      orderLink.href = orderTarget.url;
+      orderLink.classList.remove('hidden');
+      const icon = orderLink.querySelector('i');
+      if (icon) icon.className = orderTarget.type === 'phone' ? 'fa-solid fa-phone' : 'fa-brands fa-whatsapp';
+      setText('modalOrderText', orderTarget.type === 'phone' ? T[modalLang].modalCall : T[modalLang].modalOrder);
+    } else if (orderLink) {
+      orderLink.classList.add('hidden');
+      orderLink.removeAttribute('href');
+    }
+
+    const modal = $('itemModal');
+    const panel = $('itemModalPanel');
+    if (!modal || !panel) return;
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.classList.add('opacity-100');
+    panel.classList.remove('scale-95');
+    panel.classList.add('scale-100');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('overflow-hidden');
+  };
+
+  window.closeItemModal = function closeItemModal() {
+    const modal = $('itemModal');
+    const panel = $('itemModalPanel');
+    if (!modal || !panel) return;
+
+    if (document.activeElement && modal.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.classList.remove('opacity-100');
+    panel.classList.add('scale-95');
+    panel.classList.remove('scale-100');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('overflow-hidden');
+    activeModalItemId = null;
+  };
+
+  function modalOrderTarget(name, price, modalLang) {
+    const whatsapp = links.find((link) => link.type === 'whatsapp' && clean(link.url));
+    const phone = links.find((link) => link.type === 'phone' && clean(link.url));
+    const messagePrefix = modalLang === 'ar' ? T.ar.whatsappMessage : T.en.whatsappMessage;
+    const message = `${messagePrefix}${name}${price ? ` - ${price}` : ''}`;
+
+    if (whatsapp) return { url: buildWhatsAppUrl(whatsapp.url, message), type: 'whatsapp' };
+    if (phone) return { url: clean(phone.url).startsWith('tel:') ? phone.url : `tel:${normalizePhone(phone.url)}`, type: 'phone' };
+    return { url: '', type: null };
+  }
+
+  function orderUrl(title) {
+    const modalLang = currentModalLang();
+    return modalOrderTarget(title, '', modalLang).url;
+  }
+
+  function buildWhatsAppUrl(value, message) {
+    const raw = clean(value);
+    const encoded = encodeURIComponent(message);
+    if (/wa\.me|api\.whatsapp\.com/i.test(raw)) {
+      try {
+        const url = new URL(raw);
+        url.searchParams.set('text', message);
+        return url.toString();
+      } catch (error) {
+        return `${raw}${raw.includes('?') ? '&' : '?'}text=${encoded}`;
+      }
+    }
+    const phone = normalizePhone(raw);
+    return phone ? `https://wa.me/${phone}?text=${encoded}` : '';
+  }
+
+  function normalizePhone(value) {
+    return clean(value).replace(/^tel:/i, '').replace(/[^0-9+]/g, '').replace(/^\+/, '');
+  }
+
+  function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
+  function trackPublicClick(url) {
+    const token = csrfToken();
+    if (navigator.sendBeacon) {
+      const formData = new FormData();
+      if (token) formData.append('_token', token);
+      navigator.sendBeacon(url, formData);
+      return;
+    }
+
+    fetch(url, {
+      method: 'POST',
+      headers: token ? { 'X-CSRF-TOKEN': token } : {},
+      keepalive: true
+    }).catch(() => {});
+  }
+
+  function trackLinkClick(id) {
+    if (id) trackPublicClick(`/track/link/${id}`);
+  }
+
+  function trackItemOrderClick(id) {
+    if (id) trackPublicClick(`/track/item-order/${id}`);
+  }
+
+  function bindModalEvents() {
+    $('itemModalBackdrop')?.addEventListener('click', closeItemModal);
+    $('modalOrderLink')?.addEventListener('click', () => {
+      if (activeModalItemId) trackItemOrderClick(activeModalItemId);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeItemModal();
+    });
+  }
+
+  function renderAll() {
+    renderBrand();
+    renderHero();
+    renderCategories();
+    renderMenu();
+    renderContact();
+    renderFooter();
+  }
+
+  applyTheme();
+  syncDirection();
+  bindModalEvents();
+  renderAll();
+})();

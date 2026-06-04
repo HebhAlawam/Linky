@@ -1,0 +1,90 @@
+body {
+  font-family: 'Cairo', sans-serif;
+  transition: all 0.3s ease;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.08);
+  border-color: rgb(var(--primary-rgb) / 0.28);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hero-fallback {
+  background:
+    radial-gradient(circle at 25% 20%, rgb(var(--primary-rgb) / 0.28), transparent 32%),
+    radial-gradient(circle at 80% 70%, rgb(var(--primary-rgb) / 0.16), transparent 34%),
+    linear-gradient(135deg, #16100d 0%, #2b211b 50%, #0d0d0d 100%);
+}
+
+html:not(.dark) .hero-fallback {
+  background:
+    radial-gradient(circle at 25% 20%, rgb(var(--primary-rgb) / 0.18), transparent 32%),
+    radial-gradient(circle at 80% 70%, rgb(var(--primary-rgb) / 0.12), transparent 34%),
+    linear-gradient(135deg, #fff7ed 0%, #ffffff 55%, #fff1e2 100%);
+}
+
+html:not(.dark) .hero-fallback > div {
+  color: #1f1b17;
+  background: linear-gradient(to top, rgba(255, 255, 255, .9), rgba(255, 255, 255, .42), transparent);
+}
+
+html:not(.dark) .hero-fallback #heroSlogan {
+  color: #4b4038;
+}
+
+#itemModal {
+  backdrop-filter: blur(4px);
+}
+
+.contact-info-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.contact-info-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.contact-links-pills {
+  max-width: 100%;
+}
+
+html[dir="rtl"] .contact-info-line {
+  margin-left: auto;
+  text-align: right;
+}
+
+html[dir="ltr"] .contact-info-line {
+  margin-right: auto;
+  text-align: left;
+}
+
+html[dir="rtl"] .contact-links-pills {
+  justify-content: flex-start;
+}
+
+html[dir="ltr"] .contact-links-pills {
+  justify-content: flex-start;
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Linky">
+  <rect width="256" height="256" rx="64" fill="#111827"/>
+  <circle cx="128" cy="128" r="76" fill="#c94c4c" opacity=".18"/>
+  <path d="M82 172V72h26v76h66v24H82Z" fill="#ffffff"/>
+</svg>

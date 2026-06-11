@@ -27,6 +27,37 @@ a {
   scrollbar-width: none;
 }
 
+.template-placeholder-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7f7f5;
+  background: color-mix(in srgb, rgb(var(--primary-rgb)) 8%, #fff);
+}
+
+html.dark .template-placeholder-box {
+  background: color-mix(in srgb, rgb(var(--primary-rgb)) 14%, #1a1a1a);
+}
+
+.template-placeholder-icon {
+  display: block;
+  width: 42%;
+  height: 42%;
+  background: rgb(var(--primary-rgb));
+  opacity: 0.62;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.template-placeholder-icon.item {
+  mask-image: url('/images/defaults/item.svg');
+  -webkit-mask-image: url('/images/defaults/item.svg');
+}
+
 .hero-fallback {
   background:
     radial-gradient(circle at 25% 20%, rgb(var(--primary-rgb) / 0.28), transparent 32%),

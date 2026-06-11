@@ -313,11 +313,12 @@
       const price = localizedPrice(item.price);
       const priceText = localizedPrice(item.price, true);
       const image = clean(item.image_url);
+      const hasRealImage = image && !isDefaultItemImage(image);
       return `
         <div onclick="openItemModal(this)" data-id="${escapeAttr(item.id)}" data-name="${escapeAttr(titleAr)}" data-name-en="${escapeAttr(titleEn)}" data-desc="${escapeAttr(fullDescAr)}" data-desc-en="${escapeAttr(fullDescEn)}" data-price="${escapeAttr(price)}" data-img="${escapeAttr(image)}" class="bg-white dark:bg-[#1a1a1a] p-4 rounded-[2rem] card-hover shadow-sm border border-gray-100 dark:border-gray-800 cursor-pointer overflow-hidden">
-          ${image
+          ${hasRealImage
             ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" class="w-full aspect-square object-cover rounded-[1.5rem] mb-5 pointer-events-none">`
-            : `<div class="w-full aspect-square rounded-[1.5rem] mb-5 hero-fallback flex items-center justify-center text-white pointer-events-none"><i class="fa-solid fa-utensils text-4xl opacity-80"></i></div>`}
+            : `<div class="template-placeholder-box w-full aspect-square rounded-[1.5rem] mb-5 pointer-events-none"><span class="template-placeholder-icon item" aria-hidden="true"></span></div>`}
           <div class="px-2 pointer-events-none">
             <div class="flex items-start justify-between gap-4 mb-3">
               <h3 class="text-xl font-black leading-7 text-start">${escapeHtml(title)}</h3>
@@ -328,6 +329,10 @@
           </div>
         </div>`;
     }).join('');
+  }
+
+  function isDefaultItemImage(url) {
+    return typeof url === 'string' && /\/images\/defaults\/item[^/]*\.(svg|png)$/i.test(url);
   }
 
   function renderContact() {
@@ -396,12 +401,64 @@
   function renderFooter() {
     setText('footerSlogan', pageSlogan());
     setText('year', new Date().getFullYear());
+    setText('linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
   }
 
   function setText(id, value) {
     const element = $(id);
     if (element) element.textContent = value || '';
   }
+
+  let shareToastTimer = null;
+
+  function showShareToast() {
+    const toast = $('shareToast');
+    if (!toast) return;
+    toast.textContent = lang === 'ar' ? 'تم نسخ رابط الموقع' : 'Site link copied';
+    toast.classList.remove('hidden');
+    clearTimeout(shareToastTimer);
+    shareToastTimer = setTimeout(() => toast.classList.add('hidden'), 2200);
+  }
+
+  async function copyToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+  }
+
+  window.shareSite = async function shareSite() {
+    const shareData = {
+      title: document.title || pageTitle() || 'Linky',
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        showShareToast();
+        return;
+      }
+
+      await copyToClipboard(shareData.url);
+      showShareToast();
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        await copyToClipboard(shareData.url);
+        showShareToast();
+      }
+    }
+  };
 
   function toggleCard(id, visible) {
     const element = $(id);

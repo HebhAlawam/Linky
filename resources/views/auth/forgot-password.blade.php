@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>استعادة كلمة المرور - Linky</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon-96x96.png') }}" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
     <style>
         :root { --primary:#0f766e; --primary-dark:#115e59; --ink:#10202a; --muted:#667985; --line:#e5edf0; }
         * { box-sizing: border-box; }
@@ -11,7 +16,8 @@
         a { color:var(--primary); text-decoration:none; font-weight:700; }
         .card { width:min(520px,100%); background:#fff; border:1px solid var(--line); border-radius:26px; padding:34px; box-shadow:0 24px 70px rgba(16,32,42,.12); }
         .brand { display:inline-flex; align-items:center; gap:10px; font-weight:800; font-size:24px; margin-bottom:28px; }
-        .brand-mark { width:40px; height:40px; border-radius:13px; display:grid; place-items:center; background:var(--primary); color:#fff; }
+        .brand-mark { width:64px; height:64px; display:grid; place-items:center; overflow:hidden; }
+        .brand-mark img { width:100%; height:100%; object-fit:contain; }
         h1 { margin:0 0 10px; font-size:28px; }
         p { margin:0 0 24px; color:var(--muted); }
         label { display:block; margin-bottom:8px; font-weight:700; }
@@ -26,7 +32,7 @@
 </head>
 <body>
     <main class="card">
-        <a class="brand" href="{{ url('/') }}"><span class="brand-mark">L</span><span>Linky</span></a>
+        <a class="brand" href="{{ url('/') }}"><span class="brand-mark"><img src="{{ asset('images/logo/linky-logo.png') }}" alt="Linky"></span><span>Linky</span></a>
         <h1>استعادة كلمة المرور</h1>
         <p>أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور.</p>
 

@@ -38,6 +38,16 @@
     <meta name="twitter:title" content="{{ $publicMeta['title'] }}" />
     <meta name="twitter:description" content="{{ $publicMeta['description'] }}" />
     <meta name="twitter:image" content="{{ $publicMeta['image'] }}" />
+    @php
+        $pageLogoFavicon = $page->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($page->logo)
+            ? $page->logo_url
+            : null;
+    @endphp
+    @if ($pageLogoFavicon)
+      <link rel="icon" href="{{ $pageLogoFavicon }}" />
+    @else
+      <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon" />
+    @endif
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
     <link rel="stylesheet" href="{{ asset('templates/restaurant/rest3/style.css') }}?v={{ filemtime(public_path('templates/restaurant/rest3/style.css')) }}" />
     <style>
@@ -76,12 +86,15 @@
         </nav>
 
         <div class="header-actions">
+          <button class="icon-button" id="shareButton" type="button" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
           <button class="icon-button" id="langToggle" type="button" aria-label="تغيير اللغة">EN</button>
           <button class="icon-button theme-toggle" id="themeToggle" type="button" aria-label="تبديل المظهر">◐</button>
           <a class="call-button" id="headerCallButton" href="#" target="_blank" rel="noopener" data-i18n="callUs">اتصل بنا</a>
         </div>
       </div>
     </header>
+
+    <div class="share-toast" id="shareToast" role="status" aria-live="polite"></div>
 
     <main>
       <section class="hero hero-fallback" id="hero" aria-label="العروض الرئيسية">
@@ -128,6 +141,7 @@
         <div class="social-links" id="socialLinks" aria-label="روابط التواصل الاجتماعي"></div>
       </div>
       <small><span id="year"></span> © <span id="rightsText"></span></small>
+      <small class="linky-credit"><span id="linkyCreditText"></span> <a href="https://linky.sy" target="_blank" rel="noopener">Linky</a></small>
     </footer>
 
     <div class="item-modal" id="itemModal" aria-hidden="true" hidden>

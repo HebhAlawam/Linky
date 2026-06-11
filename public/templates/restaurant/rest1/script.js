@@ -129,6 +129,7 @@ function applyTranslations() {
   setText('footerMainLogo', brand);
   setText('footerSloganText', slogan);
   setText('footerBrandName', `${brand} `);
+  setText('linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
   setText('contactAddress', currentAddress());
   applyHoursSettings();
   setText('year', new Date().getFullYear());
@@ -233,12 +234,15 @@ function renderMenu() {
     const title = getTranslated(item, 'title');
     const desc = getTranslated(item, 'short_description', getTranslated(item, 'description'));
     const image = item.image_url || FALLBACKS.itemImage;
+    const hasRealImage = image && !isDefaultItemImage(image);
     const price = getPrice(item.price, true);
 
     return `
       <div class="menu-card" onclick="openDish('${item.id}')" style="animation-delay:${idx * 0.05}s">
         <div class="menu-card-img">
-          <img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" loading="lazy" />
+          ${hasRealImage
+            ? `<img src="${escapeAttr(image)}" alt="${escapeAttr(title)}" loading="lazy" />`
+            : `<div class="template-placeholder-box item-placeholder"><span class="template-placeholder-icon item" aria-hidden="true"></span></div>`}
           <div class="menu-card-hover-label">${escapeHtml(t('menu.order'))}</div>
         </div>
         <div class="menu-card-body">
@@ -250,6 +254,10 @@ function renderMenu() {
         </div>
       </div>`;
   }).join('');
+}
+
+function isDefaultItemImage(url) {
+  return typeof url === 'string' && /\/images\/defaults\/item[^/]*\.(svg|png)$/i.test(url);
 }
 
 function renderLinks() {
@@ -645,6 +653,56 @@ function initScrollReveal() {
     });
   }, { threshold: 0.12 });
   els.forEach(el => obs.observe(el));
+}
+
+async function shareSite() {
+  const shareData = {
+    title: document.title || pageTitle() || 'Linky',
+    url: window.location.href
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      showShareToast();
+      return;
+    }
+
+    await copyToClipboard(shareData.url);
+    showShareToast();
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      await copyToClipboard(shareData.url);
+      showShareToast();
+    }
+  }
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const input = document.createElement('textarea');
+  input.value = text;
+  input.setAttribute('readonly', '');
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  input.remove();
+}
+
+let shareToastTimer = null;
+function showShareToast() {
+  const toast = document.getElementById('shareToast');
+  if (!toast) return;
+  toast.textContent = lang === 'ar' ? 'تم نسخ رابط الموقع' : 'Site link copied';
+  toast.classList.add('is-visible');
+  clearTimeout(shareToastTimer);
+  shareToastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2200);
 }
 
 function escapeHtml(value) {

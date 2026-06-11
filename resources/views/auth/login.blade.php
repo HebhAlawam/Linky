@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>تسجيل الدخول - Linky</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon-96x96.png') }}" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
     <style>
         :root { --primary:#0f766e; --primary-dark:#115e59; --ink:#10202a; --muted:#667985; --line:#e5edf0; --soft:#f5f9f9; }
         * { box-sizing: border-box; }
@@ -12,7 +17,8 @@
         .auth-shell { width:min(980px,100%); display:grid; grid-template-columns:1fr 1.05fr; background:#fff; border:1px solid var(--line); border-radius:28px; overflow:hidden; box-shadow:0 26px 80px rgba(16,32,42,.12); }
         .panel { background:linear-gradient(145deg,#10202a,#123f43); color:#fff; padding:42px; display:flex; flex-direction:column; justify-content:space-between; min-height:620px; }
         .brand { display:inline-flex; align-items:center; gap:10px; font-weight:800; font-size:24px; color:#fff; }
-        .brand-mark { width:40px; height:40px; border-radius:13px; display:grid; place-items:center; background:var(--primary); color:#fff; }
+        .brand-mark { width:64px; height:64px; display:grid; place-items:center; overflow:hidden; }
+        .brand-mark img { width:100%; height:100%; object-fit:contain; }
         .panel h1 { margin:70px 0 12px; font-size:34px; line-height:1.35; }
         .panel p { color:rgba(255,255,255,.72); margin:0; }
         .form-side { padding:44px; }
@@ -36,7 +42,7 @@
 <body>
     <main class="auth-shell">
         <aside class="panel">
-            <a class="brand" href="{{ url('/') }}"><span class="brand-mark">L</span><span>Linky</span></a>
+            <a class="brand" href="{{ url('/') }}"><span class="brand-mark"><img src="{{ asset('images/logo/linky-logo.png') }}" alt="Linky"></span><span>Linky</span></a>
             <div>
                 <h1>منيو QR وموقع مصغّر خلال دقائق</h1>
                 <p>أدر موقع مطعمك، روابط التواصل، والقوالب من لوحة عربية بسيطة.</p>

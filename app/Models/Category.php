@@ -67,7 +67,7 @@ class Category extends Model
     {
         return $this->image
             ? asset('storage/' . $this->image)
-            : asset('images/defaults/category.png');
+            : asset('images/defaults/category.svg');
     }
 
     public function publicTranslations(): array

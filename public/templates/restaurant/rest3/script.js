@@ -78,6 +78,7 @@
   const productGrid = $('#productGrid');
   const contactList = $('#contactList');
   const socialLinksContainer = $('#socialLinks');
+  const shareButton = $('#shareButton');
   const themeToggle = $('#themeToggle');
   const langToggle = $('#langToggle');
   const headerCallButton = $('#headerCallButton');
@@ -176,6 +177,9 @@
       langToggle.textContent = lang === 'ar' ? 'EN' : 'AR';
       langToggle.setAttribute('aria-label', lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية');
     }
+    if (shareButton) {
+      shareButton.setAttribute('aria-label', lang === 'ar' ? 'مشاركة الموقع' : 'Share site');
+    }
 
     document.querySelectorAll('[data-i18n]').forEach((element) => {
       const key = element.getAttribute('data-i18n');
@@ -232,6 +236,57 @@
     });
 
     document.title = title;
+  }
+
+  let shareToastTimer = null;
+
+  function showShareToast() {
+    const toast = $('#shareToast');
+    if (!toast) return;
+    toast.textContent = lang === 'ar' ? 'تم نسخ رابط الموقع' : 'Site link copied';
+    toast.classList.add('is-visible');
+    clearTimeout(shareToastTimer);
+    shareToastTimer = setTimeout(() => toast.classList.remove('is-visible'), 2200);
+  }
+
+  async function copyToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+  }
+
+  async function shareSite() {
+    const shareData = {
+      title: document.title || pageTitle() || 'Linky',
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        showShareToast();
+        return;
+      }
+
+      await copyToClipboard(shareData.url);
+      showShareToast();
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        await copyToClipboard(shareData.url);
+        showShareToast();
+      }
+    }
   }
 
   function renderHero() {
@@ -323,12 +378,15 @@
       const key = category.slug || String(category.id);
       const selected = key === activeCategory;
       const image = categoryImageUrl(category);
+      const hasRealImage = image && !isDefaultCategoryImage(image);
       return `
         <button class="category-card ${selected ? 'is-active' : ''}" type="button" data-category="${escapeAttr(key)}">
-          <span class="category-icon" aria-hidden="true">
-            ${image
+          <span class="category-icon ${!hasRealImage && key !== 'all' ? 'is-placeholder' : ''}" aria-hidden="true">
+            ${hasRealImage
               ? `<img src="${escapeAttr(image)}" alt="" onerror="this.remove(); this.parentElement.classList.remove('has-image'); this.parentElement.innerHTML='${escapeAttr(categoryFallbackIcon(category))}';" />`
-              : escapeHtml(categoryFallbackIcon(category))}
+              : key !== 'all'
+                ? `<span class="template-placeholder-icon category" aria-hidden="true"></span>`
+                : escapeHtml(categoryFallbackIcon(category))}
           </span>
           <span>${escapeHtml(getTranslated(category, 'name'))}</span>
         </button>`;
@@ -357,11 +415,12 @@
       const title = getTranslated(item, 'title');
       const desc = getTranslated(item, 'short_description') || getTranslated(item, 'description');
       const image = clean(item.image_url);
+      const hasRealImage = image && !isDefaultItemImage(image);
       const price = localizedPrice(item.price);
       const priceText = price ? `${T[lang].price}: ${price}` : T[lang].priceOnRequest;
       return `
         <article class="product-card" data-product-card="${escapeAttr(item.id)}">
-          ${image
+          ${hasRealImage
             ? `<img class="product-image" src="${escapeAttr(image)}" alt="${escapeAttr(title)}" onerror="this.onerror=null;this.src='/images/defaults/item.png';" />`
             : `<div class="product-image product-image-fallback"><span>☕</span></div>`}
           <div class="product-content">
@@ -453,6 +512,14 @@
   function categoryImageUrl(category) {
     if (!category || String(category.id) === 'all' || category.slug === 'all') return '';
     return clean(category.image_url) || normalizeAssetPath(category.image);
+  }
+
+  function isDefaultItemImage(url) {
+    return typeof url === 'string' && /\/images\/defaults\/item[^/]*\.(svg|png)$/i.test(url);
+  }
+
+  function isDefaultCategoryImage(url) {
+    return typeof url === 'string' && /\/images\/defaults\/category[^/]*\.(svg|png)$/i.test(url);
   }
 
   function normalizeAssetPath(value) {
@@ -688,6 +755,7 @@
     renderContact();
     setText('#year', new Date().getFullYear());
     setText('#rightsText', T[lang].rights);
+    setText('#linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
 
     const phone = links.find((link) => ['phone', 'whatsapp'].includes(link.type) && publicLinkUrl(link));
     if (headerCallButton) {
@@ -717,6 +785,8 @@
   themeToggle?.addEventListener('click', () => {
     applyTheme(theme === 'dark' ? 'light' : 'dark');
   });
+
+  shareButton?.addEventListener('click', shareSite);
 
   heroNext?.addEventListener('click', () => moveSlide(1));
   heroPrev?.addEventListener('click', () => moveSlide(-1));

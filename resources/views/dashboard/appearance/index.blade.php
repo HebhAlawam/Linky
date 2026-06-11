@@ -146,7 +146,7 @@
                 <div class="col-md-4">
                     <label class="form-label" for="hero_image_{{ $i }}">صورة الواجهة {{ $i }}</label>
                     <input type="file" id="hero_image_{{ $i }}" name="hero_image_{{ $i }}" accept="image/*" class="form-control @error($field) is-invalid @enderror">
-                    <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 1920×1080 بكسل بنسبة 16:9. يفضل إبقاء العناصر المهمة في منتصف الصورة لأن بعض القوالب قد تقص الأطراف حسب حجم الشاشة.</div>
+                    <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 1920×1080 بكسل بنسبة 16:9.</div>
                     @error($field)<div class="invalid-feedback">{{ $message }}</div>@enderror
 
                     @if ($currentHero)

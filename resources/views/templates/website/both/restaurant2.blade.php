@@ -38,6 +38,16 @@
     <meta name="twitter:title" content="{{ $publicMeta['title'] }}">
     <meta name="twitter:description" content="{{ $publicMeta['description'] }}">
     <meta name="twitter:image" content="{{ $publicMeta['image'] }}">
+    @php
+        $pageLogoFavicon = $page->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($page->logo)
+            ? $page->logo_url
+            : null;
+    @endphp
+    @if ($pageLogoFavicon)
+        <link rel="icon" href="{{ $pageLogoFavicon }}">
+    @else
+        <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -87,6 +97,9 @@
                 <span id="navTitle" class="text-xl font-black text-restaurant truncate"></span>
             </button>
             <div class="flex gap-3">
+                <button type="button" onclick="shareSite()" id="shareButton" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-restaurant hover:text-white transition-colors" aria-label="Share site">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
                 <button type="button" onclick="toggleLanguage()" id="langToggle" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 font-bold text-sm hover:bg-restaurant hover:text-white transition-colors">English</button>
                 <button type="button" onclick="toggleTheme()" id="themeToggle" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform" aria-label="Toggle theme">
                     <i class="fa-solid fa-moon"></i>
@@ -94,6 +107,7 @@
             </div>
         </div>
     </nav>
+    <div id="shareToast" class="fixed top-5 left-1/2 z-[80] hidden -translate-x-1/2 rounded-full bg-gray-950 px-5 py-3 text-sm font-bold text-white shadow-2xl dark:bg-white dark:text-gray-950" role="status" aria-live="polite"></div>
 
     <main class="max-w-7xl mx-auto px-6 py-10">
 
@@ -177,6 +191,10 @@
             <ul id="footerSocialLinks" class="flex justify-center gap-8 mb-8"></ul>
 
             <p class="text-xs text-gray-400">© <span id="year"></span> <span id="footerName"></span> <span id="rightsText">جميع الحقوق محفوظة.</span></p>
+            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                <span id="linkyCreditText"></span>
+                <a href="https://linky.sy" target="_blank" rel="noopener" class="font-bold text-restaurant hover:underline">Linky</a>
+            </p>
         </div>
     </footer>
 

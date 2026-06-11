@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>لينكـي | منيو QR وموقع مصغّر للمطاعم</title>
     <meta name="description" content="أنشئ منيو QR وموقعًا مصغّرًا لمطعمك خلال دقائق مع قوالب جاهزة ولوحة تحكم عربية.">
+    <link rel="icon" type="image/png" href="{{ asset('favicon-96x96.png') }}" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
     <style>
         :root {
             --primary: #0f766e;
@@ -56,8 +61,14 @@
             border-radius: 12px;
             display: grid;
             place-items: center;
-            background: var(--primary);
-            color: #fff;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .nav-links,
@@ -348,7 +359,9 @@
 <body>
     <header class="container nav">
         <a class="brand" href="{{ url('/') }}">
-            <span class="brand-mark">L</span>
+            <span class="brand-mark">
+                <img src="{{ asset('images/logo/linky-logo.png') }}" alt="Linky">
+            </span>
             <span>لينكـي</span>
         </a>
         <nav class="nav-links" aria-label="روابط رئيسية">

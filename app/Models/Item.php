@@ -123,7 +123,7 @@ class Item extends Model
     {
         return $this->image
             ? asset('storage/' . $this->image)
-            : asset('images/defaults/item.png');
+            : asset('images/defaults/item.svg');
     }
 
     public function getCategoryNameTextAttribute()

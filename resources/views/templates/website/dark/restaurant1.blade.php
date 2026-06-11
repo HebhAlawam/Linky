@@ -14,6 +14,16 @@
   <meta name="twitter:title" content="{{ $publicMeta['title'] }}" />
   <meta name="twitter:description" content="{{ $publicMeta['description'] }}" />
   <meta name="twitter:image" content="{{ $publicMeta['image'] }}" />
+  @php
+    $pageLogoFavicon = $page->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($page->logo)
+        ? $page->logo_url
+        : null;
+  @endphp
+  @if ($pageLogoFavicon)
+    <link rel="icon" href="{{ $pageLogoFavicon }}">
+  @else
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+  @endif
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
@@ -64,10 +74,12 @@
 
       <div class="nav-actions">
         <button class="btn-order" onclick="scrollToSection('menu')" data-i18n="nav.order">اطلب الآن</button>
+        <button class="btn-share" type="button" onclick="shareSite()" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
         <button class="btn-lang" id="langToggle" onclick="toggleLang()" data-i18n="nav.langToggle">English</button>
       </div>
 
       <div class="nav-mobile-right">
+        <button class="btn-share" type="button" onclick="shareSite()" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
         <button class="btn-lang" id="langToggleMobile" onclick="toggleLang()" data-i18n="nav.langToggle">English</button>
         <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
       </div>
@@ -81,6 +93,7 @@
       <button class="btn-order" onclick="scrollToSection('menu')" data-i18n="nav.order">اطلب الآن</button>
     </div>
   </nav>
+  <div class="share-toast" id="shareToast" role="status" aria-live="polite"></div>
 
   <section id="home" class="hero">
     <div class="hero-slides" id="heroSlides"></div>
@@ -99,7 +112,7 @@
   <div class="dish-overlay" id="dishOverlay">
     <div class="dish-overlay-inner">
       <button class="dish-close" id="dishClose" onclick="closeDish()">&#x2715;</button>
-      <div class="dish-hero-img"><img id="dishImg" src="{{ asset('images/defaults/item.png') }}" alt="" /><span class="dish-badge" id="dishBadge"></span></div>
+      <div class="dish-hero-img"><img id="dishImg" src="{{ asset('images/defaults/item.svg') }}" alt="" /><span class="dish-badge" id="dishBadge"></span></div>
       <div class="dish-body">
         <div class="dish-info"><h2 id="dishName"></h2><div class="dish-divider"></div><p id="dishDesc"></p></div>
         <div class="dish-order-panel">
@@ -145,6 +158,7 @@
 
   <footer class="footer">
     <div class="footer-inner"><div class="footer-brand"><div class="footer-logo" id="footerMainLogo"></div><p id="footerSloganText"></p></div><div class="footer-copy">&copy; <span id="year"></span> <span id="footerBrandName"></span><span data-i18n="footer.copyright">جميع الحقوق محفوظة.</span></div></div>
+    <div class="linky-credit"><span id="linkyCreditText"></span> <a href="https://linky.sy" target="_blank" rel="noopener">Linky</a></div>
     <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">
         <i class="ti ti-chevron-up"></i>
     </button>

@@ -402,7 +402,7 @@
 
         .footer .container {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             gap: 16px;
             flex-wrap: wrap;
         }
@@ -677,8 +677,8 @@
 
     <footer class="footer">
         <div class="container">
-            <span>© 2026 Linky</span>
-            <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener">تواصل معنا عبر واتساب</a>
+            <span> © 2026 Linky — مواقع مصغّرة ومنيو QR للأعمال المحلية  </span>
+
         </div>
     </footer>
 </body>

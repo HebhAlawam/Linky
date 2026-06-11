@@ -477,7 +477,13 @@
             .hero-preview { min-height: 320px; padding: 18px; border-radius: 18px; }
             .hero-preview strong { font-size: 24px; }
             .qr-box { width: 96px; height: 96px; padding: 12px; gap: 5px; }
-            .stats { grid-template-columns: 1fr; }
+            .stats {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .stat { padding: 10px 6px; }
+            .stat span { font-size: 12px; }
             .final-cta-section { padding: 42px 0; }
             .footer .container { justify-content: center; text-align: center; }
         }
@@ -485,7 +491,7 @@
 </head>
 <body>
     @php
-        $whatsappUrl = 'https://wa.me/XXXXXXXXXXX'; // TODO: replace with real Linky WhatsApp number
+        $whatsappUrl = 'https://wa.me/+963985238057'; // TODO: replace with real Linky WhatsApp number
     @endphp
 
     <header class="container nav">

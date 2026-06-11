@@ -755,7 +755,8 @@
     renderContact();
     setText('#year', new Date().getFullYear());
     setText('#rightsText', T[lang].rights);
-    setText('#linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
+    setText('#linkyCreditText', lang === 'ar' ? 'طُوّر بواسطة' : 'powered by');
+    document.querySelector('.linky-signature a')?.replaceChildren(document.createTextNode(lang === 'ar' ? 'لينكـي' : 'Linky'));
 
     const phone = links.find((link) => ['phone', 'whatsapp'].includes(link.type) && publicLinkUrl(link));
     if (headerCallButton) {

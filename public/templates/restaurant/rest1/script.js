@@ -129,7 +129,8 @@ function applyTranslations() {
   setText('footerMainLogo', brand);
   setText('footerSloganText', slogan);
   setText('footerBrandName', `${brand} `);
-  setText('linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
+  setText('linkyCreditText', lang === 'ar' ? 'طُوّر بواسطة' : 'powered by');
+  document.querySelector('.linky-signature a')?.replaceChildren(document.createTextNode(lang === 'ar' ? 'لينكـي' : 'Linky'));
   setText('contactAddress', currentAddress());
   applyHoursSettings();
   setText('year', new Date().getFullYear());

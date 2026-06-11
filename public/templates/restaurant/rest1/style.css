@@ -618,19 +618,23 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 }
 .footer-brand p { color: var(--fg-muted); font-size: 0.875rem; font-style: italic; }
 .footer-copy { color: var(--fg-muted); font-size: 0.85rem; }
-.linky-credit {
-  margin-top: 0.45rem;
-  color: rgba(237, 232, 219, 0.55);
-  font-size: 0.78rem;
+.linky-signature {
+  width: 100%;
+  padding: 1.15rem 1rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+  color: #64748b;
   text-align: center;
-    margin-top: 80px;
+  font-family: sans-serif;
+  font-size: 0.84rem;
+  line-height: 1.7;
 }
-.linky-credit a {
+.linky-signature a {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
 }
-.linky-credit a:hover {
+.linky-signature a:hover {
   text-decoration: underline;
 }
 .back-to-top {

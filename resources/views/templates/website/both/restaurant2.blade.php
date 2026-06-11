@@ -191,12 +191,12 @@
             <ul id="footerSocialLinks" class="flex justify-center gap-8 mb-8"></ul>
 
             <p class="text-xs text-gray-400">© <span id="year"></span> <span id="footerName"></span> <span id="rightsText">جميع الحقوق محفوظة.</span></p>
-            <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">
-                <span id="linkyCreditText"></span>
-                <a href="https://linky.sy" target="_blank" rel="noopener" class="font-bold text-restaurant hover:underline">Linky</a>
-            </p>
         </div>
     </footer>
+    <div class="linky-signature">
+        <span id="linkyCreditText"></span>
+        <a href="{{ url('/') }}" target="_blank" rel="noopener">Linky</a>
+    </div>
 
     <div id="itemModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 opacity-0 pointer-events-none transition-opacity duration-300" aria-hidden="true">
         <div id="itemModalBackdrop" class="absolute inset-0"></div>

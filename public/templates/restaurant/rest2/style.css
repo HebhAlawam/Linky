@@ -119,3 +119,29 @@ html[dir="rtl"] .contact-links-pills {
 html[dir="ltr"] .contact-links-pills {
   justify-content: flex-start;
 }
+
+.linky-signature {
+  width: 100%;
+  padding: 18px 16px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.linky-signature a {
+  color: rgb(var(--primary-rgb));
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.linky-signature a:hover {
+  text-decoration: underline;
+}
+
+html.dark .linky-signature {
+  background: #ffffff;
+  color: #64748b;
+}

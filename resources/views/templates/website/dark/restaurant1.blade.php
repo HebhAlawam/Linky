@@ -158,11 +158,11 @@
 
   <footer class="footer">
     <div class="footer-inner"><div class="footer-brand"><div class="footer-logo" id="footerMainLogo"></div><p id="footerSloganText"></p></div><div class="footer-copy">&copy; <span id="year"></span> <span id="footerBrandName"></span><span data-i18n="footer.copyright">جميع الحقوق محفوظة.</span></div></div>
-    <div class="linky-credit"><span id="linkyCreditText"></span> <a href="https://linky.sy" target="_blank" rel="noopener">Linky</a></div>
     <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">
         <i class="ti ti-chevron-up"></i>
     </button>
  </footer>
+  <div class="linky-signature"><span id="linkyCreditText"></span> <a href="{{ url('/') }}" target="_blank" rel="noopener">Linky</a></div>
 
   <script>
     window.APP = { lang: 'ar', data: @json($pageData) };

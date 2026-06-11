@@ -141,8 +141,8 @@
         <div class="social-links" id="socialLinks" aria-label="روابط التواصل الاجتماعي"></div>
       </div>
       <small><span id="year"></span> © <span id="rightsText"></span></small>
-      <small class="linky-credit"><span id="linkyCreditText"></span> <a href="https://linky.sy" target="_blank" rel="noopener">Linky</a></small>
     </footer>
+    <div class="linky-signature"><span id="linkyCreditText"></span> <a href="{{ url('/') }}" target="_blank" rel="noopener">Linky</a></div>
 
     <div class="item-modal" id="itemModal" aria-hidden="true" hidden>
       <div class="item-modal-backdrop" id="itemModalBackdrop"></div>

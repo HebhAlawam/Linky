@@ -401,7 +401,8 @@
   function renderFooter() {
     setText('footerSlogan', pageSlogan());
     setText('year', new Date().getFullYear());
-    setText('linkyCreditText', lang === 'ar' ? 'تم إنشاء هذا الموقع بواسطة' : 'Created with');
+    setText('linkyCreditText', lang === 'ar' ? 'طُوّر بواسطة' : 'powered by');
+    $('linkyCreditText')?.parentElement?.querySelector('a')?.replaceChildren(document.createTextNode(lang === 'ar' ? 'لينكـي' : 'Linky'));
   }
 
   function setText(id, value) {

@@ -1,0 +1,36 @@
+{
+  "_module.esm--bCazUpo.js": {
+    "file": "assets/module.esm--bCazUpo.js",
+    "name": "module.esm"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-BqlLVFA5.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app-tabler.js": {
+    "file": "assets/app-tabler-DG_93v9s.js",
+    "name": "app-tabler",
+    "src": "resources/js/app-tabler.js",
+    "isEntry": true,
+    "imports": [
+      "_module.esm--bCazUpo.js"
+    ],
+    "css": [
+      "assets/app-tabler-BhgXkYF-.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-B2-yBuiJ.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_module.esm--bCazUpo.js"
+    ]
+  }
+}

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -34,7 +35,19 @@ class WebImageOptimizer
 
         try {
             $image = $this->orientJpeg($image, $file);
-            $image = $this->resize($image, $maxLongestSide, $maxWidth);
+            $resized = $this->resize($image, $maxLongestSide, $maxWidth);
+
+            if ($resized === false) {
+                Log::warning('Image resize failed; storing the original uploaded image.', [
+                    'mime_type' => $file->getMimeType(),
+                    'original_name' => $file->getClientOriginalName(),
+                    'directory' => $directory,
+                ]);
+
+                return $this->storeOriginal($file, $directory);
+            }
+
+            $image = $resized;
             $relativePath = trim($directory, '/').'/'.Str::uuid().'.webp';
             $absolutePath = Storage::disk('public')->path($relativePath);
 
@@ -82,7 +95,7 @@ class WebImageOptimizer
         return $rotated;
     }
 
-    private function resize(\GdImage $image, ?int $maxLongestSide, ?int $maxWidth): \GdImage
+    private function resize(\GdImage $image, ?int $maxLongestSide, ?int $maxWidth): \GdImage|false
     {
         $width = imagesx($image);
         $height = imagesy($image);
@@ -100,19 +113,51 @@ class WebImageOptimizer
             return $image;
         }
 
-        $resized = imagescale(
-            $image,
-            max(1, (int) round($width * $scale)),
-            max(1, (int) round($height * $scale)),
-            IMG_BICUBIC_FIXED,
-        );
+        $newWidth = max(1, (int) round($width * $scale));
+        $newHeight = max(1, (int) round($height * $scale));
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
 
         if ($resized === false) {
-            throw new RuntimeException('The uploaded image could not be resized.');
+            return false;
+        }
+
+        imagealphablending($resized, false);
+        imagesavealpha($resized, true);
+        $transparent = imagecolorallocatealpha($resized, 0, 0, 0, 127);
+        imagefill($resized, 0, 0, $transparent);
+
+        $copied = imagecopyresampled(
+            $resized,
+            $image,
+            0,
+            0,
+            0,
+            0,
+            $newWidth,
+            $newHeight,
+            $width,
+            $height,
+        );
+
+        if (! $copied) {
+            imagedestroy($resized);
+
+            return false;
         }
 
         imagedestroy($image);
 
         return $resized;
+    }
+
+    private function storeOriginal(UploadedFile $file, string $directory): string
+    {
+        $path = $file->store($directory, 'public');
+
+        if ($path === false) {
+            throw new RuntimeException('The original uploaded image could not be saved.');
+        }
+
+        return $path;
     }
 }

@@ -149,7 +149,10 @@
       <div class="item-modal-panel" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
         <button class="item-modal-close" id="itemModalClose" type="button" aria-label="إغلاق">×</button>
         <div class="item-modal-media">
-          <img id="itemModalImage" src="{{ asset('images/defaults/item.png') }}" alt="" />
+          <img id="itemModalImage" src="" alt="" hidden />
+          <div class="item-modal-image-fallback" id="itemModalImageFallback" hidden>
+            <span class="template-placeholder-icon" aria-hidden="true"></span>
+          </div>
         </div>
         <div class="item-modal-content">
           <span class="item-modal-category" id="itemModalCategory"></span>

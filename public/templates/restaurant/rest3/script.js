@@ -421,8 +421,9 @@
       return `
         <article class="product-card" data-product-card="${escapeAttr(item.id)}">
           ${hasRealImage
-            ? `<img class="product-image" src="${escapeAttr(image)}" alt="${escapeAttr(title)}" onerror="this.onerror=null;this.src='/images/defaults/item.png';" />`
-            : `<div class="product-image product-image-fallback"><span>☕</span></div>`}
+            ? `<img class="product-image" src="${escapeAttr(image)}" alt="${escapeAttr(title)}" onerror="this.onerror=null;this.hidden=true;this.nextElementSibling.hidden=false;" />
+               <div class="product-image product-image-fallback" hidden><span aria-hidden="true"></span></div>`
+            : `<div class="product-image product-image-fallback"><span aria-hidden="true"></span></div>`}
           <div class="product-content">
             <h3>${escapeHtml(title)}</h3>
             <p>${escapeHtml(desc)}</p>
@@ -442,7 +443,8 @@
   }
 
   function itemImage(item) {
-    return clean(item?.image_url) || '/images/defaults/item.png';
+    const image = clean(item?.image_url);
+    return image && !isDefaultItemImage(image) ? image : '';
   }
 
   function renderItemModal() {
@@ -455,13 +457,23 @@
     const target = orderTarget(title, price);
 
     const image = $('#itemModalImage');
-    if (image) {
-      image.src = itemImage(activeModalItem);
+    const imageFallback = $('#itemModalImageFallback');
+    if (image && imageFallback) {
+      const imageUrl = itemImage(activeModalItem);
       image.alt = title;
+      image.hidden = !imageUrl;
+      imageFallback.hidden = Boolean(imageUrl);
       image.onerror = () => {
         image.onerror = null;
-        image.src = '/images/defaults/item.png';
+        image.hidden = true;
+        image.removeAttribute('src');
+        imageFallback.hidden = false;
       };
+      if (imageUrl) {
+        image.src = imageUrl;
+      } else {
+        image.removeAttribute('src');
+      }
     }
 
     setText('#itemModalCategory', category);

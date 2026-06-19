@@ -40,6 +40,15 @@
       @endphp
 
       <ul class="navbar-nav pt-lg-3">
+        @if (auth()->user()?->isAdmin())
+          <li class="nav-item mt-2 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+            <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+              <span class="nav-link-icon d-md-none d-lg-inline-block"><i class="ti ti-users"></i></span>
+              <span class="nav-link-title">إدارة المستخدمين</span>
+            </a>
+          </li>
+        @endif
+
         @foreach ($navItems as $item)
           @php($isActive = request()->routeIs(...$item['active']))
           <li class="nav-item {{ $item['class'] ?? '' }} {{ $isActive ? 'active' : '' }}">

@@ -1,11 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Dashboard\AppearanceController;
 use App\Http\Controllers\Dashboard\CategoryController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\ItemController;
-use App\Http\Controllers\Dashboard\MyWebsiteController;
 use App\Http\Controllers\Dashboard\LinkController;
+use App\Http\Controllers\Dashboard\MyWebsiteController;
 use App\Http\Controllers\Dashboard\PageController;
 use App\Http\Controllers\Dashboard\QrCodeController;
 use App\Http\Controllers\Dashboard\StatsController;
@@ -18,7 +19,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
+    Route::patch('/users/{user}/suspend', [UserManagementController::class, 'suspend'])->name('users.suspend');
+    Route::patch('/users/{user}/activate', [UserManagementController::class, 'activate'])->name('users.activate');
+});
+
+Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/qr/download', [QrCodeController::class, 'download'])->name('dashboard.qr.download');
 

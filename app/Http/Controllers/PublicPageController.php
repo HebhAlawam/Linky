@@ -13,6 +13,7 @@ class PublicPageController extends Controller
     {
         $page = Page::query()
             ->published()
+            ->whereHas('user', fn ($query) => $query->where('status', 'active'))
             ->where('slug', $slug)
             ->with([
                 'visibleCategories' => fn ($query) => $query

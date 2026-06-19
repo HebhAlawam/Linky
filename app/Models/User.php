@@ -19,6 +19,9 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'status',
+        'suspended_at',
+        'suspended_reason',
         'business_name',
     ];
 
@@ -32,11 +35,22 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'suspended_at' => 'datetime',
         ];
     }
 
     public function pages()
     {
         return $this->hasMany(Page::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
     }
 }

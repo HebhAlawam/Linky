@@ -14,17 +14,6 @@
     $priceEn = old('price_en', $defaultPriceEn);
 @endphp
 
-@if ($errors->any())
-    <div class="alert alert-danger" role="alert">
-        <div class="fw-bold mb-1">يرجى مراجعة الحقول التالية:</div>
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
 @if ($categories->isEmpty())
     <div class="alert alert-warning d-flex align-items-center justify-content-between gap-3" role="alert">
         <div>أضف تصنيفاً أولاً قبل إنشاء العناصر.</div>
@@ -116,7 +105,7 @@
     <div class="col-md-6">
         <label class="form-label" for="image">الصورة</label>
         <input type="file" id="image" name="image" accept="image/*" class="form-control @error('image') is-invalid @enderror" @disabled($categories->isEmpty())>
-        <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 1000×1000 بكسل بنسبة مربعة 1:1.</div>
+        <div class="form-hint">الحد الأقصى 5MB. الصيغ المدعومة: JPG, PNG, WEBP. تُحسّن الصورة تلقائيًا للويب، والمقاس المفضل مربع 1:1.</div>
         @error('image')<div class="invalid-feedback">{{ $message }}</div>@enderror
 
         @if ($isEdit && $item->image)

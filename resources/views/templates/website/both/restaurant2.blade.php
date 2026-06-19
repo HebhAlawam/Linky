@@ -93,7 +93,7 @@
     <nav class="sticky top-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
             <button type="button" onclick="scrollToTop()" class="flex items-center gap-3 min-w-0 text-start">
-                <img id="navLogo" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" class="h-10 w-auto max-w-[96px] sm:max-w-[120px] object-contain hidden max-sm:hidden">
+                <img id="navLogo" src="" alt="" class="h-10 w-auto max-w-[72px] sm:h-12 sm:max-w-[112px] shrink-0 object-contain hidden">
                 <span id="navTitle" class="text-xl font-black text-restaurant truncate"></span>
             </button>
             <div class="flex gap-3">

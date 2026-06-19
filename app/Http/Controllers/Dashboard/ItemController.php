@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
+use App\Services\WebImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -39,7 +40,7 @@ class ItemController extends Controller
         return view('dashboard.items.create', compact('categories'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, WebImageOptimizer $imageOptimizer)
     {
         $page = $this->currentPage($request);
 
@@ -70,7 +71,7 @@ class ItemController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $itemData['image'] = $request->file('image')->store('items', 'public');
+            $itemData['image'] = $imageOptimizer->store($request->file('image'), 'items', maxLongestSide: 1200);
         }
 
         Item::query()->create($itemData);
@@ -95,7 +96,7 @@ class ItemController extends Controller
         return view('dashboard.items.edit', compact('item', 'categories'));
     }
 
-    public function update(Request $request, Item $item)
+    public function update(Request $request, Item $item, WebImageOptimizer $imageOptimizer)
     {
         $page = $this->currentPage($request);
 
@@ -124,7 +125,7 @@ class ItemController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $itemData['image'] = $request->file('image')->store('items', 'public');
+            $itemData['image'] = $imageOptimizer->store($request->file('image'), 'items', maxLongestSide: 1200);
         }
 
         $item->update($itemData);
@@ -199,7 +200,7 @@ class ItemController extends Controller
             ],
             'price_ar' => ['nullable', 'string', 'max:255'],
             'price_en' => ['nullable', 'string', 'max:255'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_featured' => ['nullable', 'boolean'],
             'is_visible' => ['nullable', 'boolean'],
             'display_order' => ['nullable', 'integer', 'min:0'],

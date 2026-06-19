@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Services\WebImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,7 @@ class AppearanceController extends Controller
         return view('dashboard.appearance.index', compact('page', 'settings', 'templates', 'selectedTemplate'));
     }
 
-    public function update(Request $request)
+    public function update(Request $request, WebImageOptimizer $imageOptimizer)
     {
         $page = $this->currentPage($request);
 
@@ -39,9 +40,9 @@ class AppearanceController extends Controller
             'address_en' => ['nullable', 'string', 'max:1000'],
             'hours_ar' => ['nullable', 'string', 'max:2000'],
             'hours_en' => ['nullable', 'string', 'max:2000'],
-            'hero_image_1' => ['nullable', 'image', 'max:2048'],
-            'hero_image_2' => ['nullable', 'image', 'max:2048'],
-            'hero_image_3' => ['nullable', 'image', 'max:2048'],
+            'hero_image_1' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'hero_image_2' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'hero_image_3' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'remove_hero_image_1' => ['nullable', 'boolean'],
             'remove_hero_image_2' => ['nullable', 'boolean'],
             'remove_hero_image_3' => ['nullable', 'boolean'],
@@ -62,14 +63,15 @@ class AppearanceController extends Controller
         $heroImages = [];
 
         for ($slot = 1; $slot <= 3; $slot++) {
-            $field = 'hero_image_' . $slot;
-            $removeField = 'remove_hero_image_' . $slot;
+            $field = 'hero_image_'.$slot;
+            $removeField = 'remove_hero_image_'.$slot;
             $existing = $existingHeroImages->get($slot - 1);
             $existingUrl = is_array($existing) ? ($existing['url'] ?? null) : (is_string($existing) ? $existing : null);
 
             if ($request->hasFile($field)) {
-                $path = $request->file($field)->store('appearance/hero', 'public');
-                $heroImages[] = ['url' => asset('storage/' . $path)];
+                $path = $imageOptimizer->store($request->file($field), 'appearance/hero', maxWidth: 1920);
+                $heroImages[] = ['url' => asset('storage/'.$path)];
+
                 continue;
             }
 

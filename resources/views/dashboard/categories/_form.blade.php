@@ -6,17 +6,6 @@
     $descriptionEn = old('description_en', $isEdit ? $category->getTranslation('description', 'en', false) : '');
 @endphp
 
-@if ($errors->any())
-    <div class="alert alert-danger" role="alert">
-        <div class="fw-bold mb-1">يرجى مراجعة الحقول التالية:</div>
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
 <h3 class="card-title mb-3">المعلومات الأساسية</h3>
 <div class="row g-3 mb-4">
     <div class="col-md-6">
@@ -52,7 +41,7 @@
     <div class="col-md-6">
         <label class="form-label" for="image">الصورة</label>
         <input type="file" id="image" name="image" accept="image/*" class="form-control @error('image') is-invalid @enderror">
-        <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 600×600 بكسل بنسبة مربعة 1:1.</div>
+        <div class="form-hint">الحد الأقصى 5MB. الصيغ المدعومة: JPG, PNG, WEBP. تُحسّن الصورة تلقائيًا للويب، والمقاس المفضل مربع 1:1.</div>
         @error('image')<div class="invalid-feedback">{{ $message }}</div>@enderror
 
         @if ($isEdit && $category->image)

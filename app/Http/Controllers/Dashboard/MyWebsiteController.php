@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
+use App\Services\WebImageOptimizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,7 +14,6 @@ use Illuminate\View\View;
 class MyWebsiteController extends Controller
 {
     private const TEMPLATE = 'restaurant1';
-
 
     private const USER_STATUSES = [
         'draft' => 'مسودة',
@@ -32,7 +32,7 @@ class MyWebsiteController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WebImageOptimizer $imageOptimizer): RedirectResponse
     {
         if ($this->currentPage($request)) {
             return redirect()
@@ -57,7 +57,7 @@ class MyWebsiteController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $pageData['logo'] = $request->file('logo')->store('page-logos', 'public');
+            $pageData['logo'] = $imageOptimizer->store($request->file('logo'), 'page-logos', maxLongestSide: 600);
         }
 
         Page::query()->create($pageData);
@@ -67,7 +67,7 @@ class MyWebsiteController extends Controller
             ->with('success', 'تم إنشاء الموقع بنجاح. يمكنك الآن إضافة التصنيفات والعناصر والروابط.');
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, WebImageOptimizer $imageOptimizer): RedirectResponse
     {
         $page = $this->currentPage($request);
 
@@ -90,7 +90,7 @@ class MyWebsiteController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            $pageData['logo'] = $request->file('logo')->store('page-logos', 'public');
+            $pageData['logo'] = $imageOptimizer->store($request->file('logo'), 'page-logos', maxLongestSide: 600);
         }
 
         $page->update($pageData);
@@ -119,7 +119,7 @@ class MyWebsiteController extends Controller
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('pages', 'slug')->ignore($page?->id),
             ],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048'],
             'status' => ['required', Rule::in(array_keys(self::USER_STATUSES))],
         ], [
             'slug.regex' => 'رابط الموقع يجب أن يحتوي على أحرف إنجليزية صغيرة وأرقام وشرطات فقط.',

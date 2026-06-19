@@ -80,17 +80,6 @@
     @method('PUT')
 
     <div class="card-body">
-        {{-- @if ($errors->any())
-            <div class="alert alert-danger" role="alert">
-                <div class="fw-bold mb-1">يرجى مراجعة الحقول التالية:</div>
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif --}}
-
         <h3 class="card-title mb-1">اختيار القالب</h3>
         <p class="text-secondary mb-3">يمكنك تغيير شكل موقعك دون فقدان المحتوى.</p>
         <div class="form-hint mb-3">صور معاينة القوالب يفضل أن تكون طويلة مثل 1080×1920 بكسل.</div>
@@ -146,7 +135,7 @@
                 <div class="col-md-4">
                     <label class="form-label" for="hero_image_{{ $i }}">صورة الواجهة {{ $i }}</label>
                     <input type="file" id="hero_image_{{ $i }}" name="hero_image_{{ $i }}" accept="image/*" class="form-control @error($field) is-invalid @enderror">
-                    <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 1920×1080 بكسل بنسبة 16:9.</div>
+                    <div class="form-hint">الحد الأقصى 8MB. الصيغ المدعومة: JPG, PNG, WEBP. تُحسّن الصورة تلقائيًا للويب، والمقاس المفضل 1920×1080 بنسبة 16:9.</div>
                     @error($field)<div class="invalid-feedback">{{ $message }}</div>@enderror
 
                     @if ($currentHero)

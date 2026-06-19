@@ -182,7 +182,7 @@
 
   function renderBrand() {
     const title = pageTitle();
-    const logo = clean(page.logo_url);
+    const logo = usableLogoUrl();
     const navLogo = $('navLogo');
     const navTitle = $('navTitle');
 
@@ -192,10 +192,22 @@
     }
 
     if (navLogo) {
-      navLogo.src = EMPTY_IMAGE;
-      navLogo.alt = '';
-      navLogo.classList.add('hidden');
-      navLogo.onerror = null;
+      if (logo) {
+        navLogo.onerror = () => {
+          navLogo.onerror = null;
+          navLogo.removeAttribute('src');
+          navLogo.alt = '';
+          navLogo.classList.add('hidden');
+        };
+        navLogo.src = logo;
+        navLogo.alt = title;
+        navLogo.classList.remove('hidden');
+      } else {
+        navLogo.onerror = null;
+        navLogo.removeAttribute('src');
+        navLogo.alt = '';
+        navLogo.classList.add('hidden');
+      }
     }
 
     const footerLogo = $('footerLogo');
@@ -206,6 +218,14 @@
     }
 
     if ($('footerName')) $('footerName').textContent = title;
+  }
+
+  function usableLogoUrl() {
+    const url = clean(page.logo_url);
+    if (!url || url === '#') return '';
+    if (/\/images\/defaults\/logo[^/]*\.(svg|png)$/i.test(url)) return '';
+
+    return url;
   }
 
   function renderHero() {

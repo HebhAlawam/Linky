@@ -5,17 +5,6 @@
     $titlePayload = $isEdit ? $link->title_payload : ['ar' => null, 'en' => null];
 @endphp
 
-@if ($errors->any())
-    <div class="alert alert-danger" role="alert">
-        <div class="fw-bold mb-1">يرجى مراجعة الحقول التالية:</div>
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
 <h3 class="card-title mb-3">معلومات الرابط</h3>
 <div class="row g-3 mb-4">
     <div class="col-md-4">

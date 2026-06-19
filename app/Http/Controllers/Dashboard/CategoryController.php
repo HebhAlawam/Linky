@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\WebImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -37,7 +38,7 @@ class CategoryController extends Controller
         return view('dashboard.categories.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, WebImageOptimizer $imageOptimizer)
     {
         $page = $this->currentPage($request);
 
@@ -58,7 +59,7 @@ class CategoryController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $categoryData['image'] = $request->file('image')->store('categories', 'public');
+            $categoryData['image'] = $imageOptimizer->store($request->file('image'), 'categories', maxLongestSide: 1000);
         }
 
         Category::query()->create($categoryData);
@@ -81,7 +82,7 @@ class CategoryController extends Controller
         return view('dashboard.categories.edit', compact('category'));
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, Category $category, WebImageOptimizer $imageOptimizer)
     {
         $page = $this->currentPage($request);
 
@@ -104,7 +105,7 @@ class CategoryController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            $categoryData['image'] = $request->file('image')->store('categories', 'public');
+            $categoryData['image'] = $imageOptimizer->store($request->file('image'), 'categories', maxLongestSide: 1000);
         }
 
         $category->update($categoryData);
@@ -177,7 +178,7 @@ class CategoryController extends Controller
             'name_en' => ['nullable', 'string', 'max:255'],
             'description_ar' => ['nullable', 'string'],
             'description_en' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_visible' => ['nullable', 'boolean'],
         ], [], [
             'name_ar' => 'الاسم بالعربي',
@@ -222,7 +223,7 @@ class CategoryController extends Controller
             ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
             ->where('slug', $slug)
             ->exists()) {
-            $slug = $base . '-' . $counter;
+            $slug = $base.'-'.$counter;
             $counter++;
         }
 

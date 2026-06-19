@@ -23,17 +23,6 @@
     @endif
 
     <div class="card-body">
-        {{-- @if ($errors->any())
-            <div class="alert alert-danger" role="alert">
-                <div class="fw-bold mb-1">يرجى مراجعة الحقول التالية:</div>
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif --}}
-
         @if ($isEdit)
             <div class="card bg-primary-lt border-primary-lt mb-4">
                 <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
@@ -124,7 +113,7 @@
             <div class="col-md-6">
                 <label class="form-label" for="logo">الشعار</label>
                 <input type="file" id="logo" name="logo" accept="image/*" class="form-control @error('logo') is-invalid @enderror">
-                <div class="form-hint">الحد الأقصى 2MB. المقاس المفضل: 600×600 بكسل، ويفضل PNG أو SVG بخلفية شفافة. إذا لم ترفع شعاراً سيظهر الشعار الافتراضي.</div>
+                <div class="form-hint">الحد الأقصى 2MB. الصيغ المدعومة: JPG, PNG, WEBP, SVG. تُحسّن الصور النقطية تلقائيًا، ويدعم SVG كما هو. المقاس المفضل: 600×600 بكسل.</div>
                 @error('logo')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 

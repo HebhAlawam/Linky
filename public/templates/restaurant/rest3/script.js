@@ -106,17 +106,47 @@
   }
 
   function localizedPrice(value, withFallback = false) {
-    let price = '';
-
-    if (value && typeof value === 'object') {
-      price = clean(value[lang]) || clean(value[lang === 'ar' ? 'en' : 'ar']) || clean(Object.values(value).find(Boolean));
-    } else if (typeof value === 'string') {
-      price = clean(value);
-    }
+    const details = localizedPriceDetails(value);
+    const price = details.discount || details.base;
 
     if (price || !withFallback) return price;
 
     return T[lang].priceOnRequest;
+  }
+
+  function localizedPriceDetails(value, locale = lang) {
+    if (typeof value === 'string') {
+      return { base: clean(value), discount: '' };
+    }
+
+    if (!value || typeof value !== 'object') {
+      return { base: '', discount: '' };
+    }
+
+    const selectedLocale = [locale, locale === 'ar' ? 'en' : 'ar']
+      .find(candidate => clean(value[candidate]));
+    const base = selectedLocale ? clean(value[selectedLocale]) : '';
+    const discount = selectedLocale && value.discount_price && typeof value.discount_price === 'object'
+      ? clean(value.discount_price[selectedLocale])
+      : '';
+    const hasValidDiscount = base !== '' && discount !== '';
+
+    return { base, discount: hasValidDiscount ? discount : '' };
+  }
+
+  function priceMarkup(value, withFallback = true) {
+    const details = localizedPriceDetails(value);
+
+    if (details.discount) {
+      return `<span class="price-original">${escapeHtml(`${T[lang].price}: ${details.base}`)}</span><span class="price-discount">${escapeHtml(`${T[lang].price}: ${details.discount}`)}</span>`;
+    }
+
+    if (details.base) {
+      return `<span class="price-current">${escapeHtml(`${T[lang].price}: ${details.base}`)}</span>`;
+    }
+
+    const fallback = withFallback ? localizedPrice(value, true) : '';
+    return fallback ? `<span class="price-current">${escapeHtml(fallback)}</span>` : '';
   }
 
   function translationValue(source, field, locale) {
@@ -416,8 +446,7 @@
       const desc = getTranslated(item, 'short_description') || getTranslated(item, 'description');
       const image = clean(item.image_url);
       const hasRealImage = image && !isDefaultItemImage(image);
-      const price = localizedPrice(item.price);
-      const priceText = price ? `${T[lang].price}: ${price}` : T[lang].priceOnRequest;
+      const priceText = priceMarkup(item.price, true);
       return `
         <article class="product-card" data-product-card="${escapeAttr(item.id)}">
           ${hasRealImage
@@ -429,7 +458,7 @@
             <p>${escapeHtml(desc)}</p>
             <div class="product-bottom">
               <div class="product-meta">
-                <strong class="price">${escapeHtml(priceText)}</strong>
+                <strong class="price">${priceText}</strong>
               </div>
               <button class="add-button" type="button" data-view-item="${escapeAttr(item.id)}">${escapeHtml(T[lang].viewDetails)}</button>
             </div>
@@ -479,7 +508,8 @@
     setText('#itemModalCategory', category);
     setText('#itemModalTitle', title);
     setText('#itemModalDescription', description);
-    setText('#itemModalPrice', price ? `${T[lang].price}: ${price}` : T[lang].priceOnRequest);
+    const modalPrice = $('#itemModalPrice');
+    if (modalPrice) modalPrice.innerHTML = priceMarkup(activeModalItem.price, true);
     setText('#itemModalOrder', T[lang].orderNow);
     setText('#itemModalUnavailable', T[lang].orderUnavailable);
 

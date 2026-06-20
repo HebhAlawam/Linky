@@ -103,17 +103,43 @@
   }
 
   function localizedPrice(value, withFallback = false, locale = lang) {
-    let price = '';
-
-    if (value && typeof value === 'object') {
-      price = clean(value[locale]) || clean(value[locale === 'ar' ? 'en' : 'ar']) || clean(Object.values(value).find(Boolean));
-    } else if (typeof value === 'string') {
-      price = clean(value);
-    }
+    const details = localizedPriceDetails(value, locale);
+    const price = details.discount || details.base;
 
     if (price || !withFallback) return price;
 
     return locale === 'ar' ? T.ar.priceOnRequest : T.en.priceOnRequest;
+  }
+
+  function localizedPriceDetails(value, locale = lang) {
+    if (typeof value === 'string') {
+      return { base: clean(value), discount: '' };
+    }
+
+    if (!value || typeof value !== 'object') {
+      return { base: '', discount: '' };
+    }
+
+    const selectedLocale = [locale, locale === 'ar' ? 'en' : 'ar']
+      .find(candidate => clean(value[candidate]));
+    const base = selectedLocale ? clean(value[selectedLocale]) : '';
+    const discount = selectedLocale && value.discount_price && typeof value.discount_price === 'object'
+      ? clean(value.discount_price[selectedLocale])
+      : '';
+    const hasValidDiscount = base !== '' && discount !== '';
+
+    return { base, discount: hasValidDiscount ? discount : '' };
+  }
+
+  function priceMarkup(value, locale = lang, withFallback = true) {
+    const details = localizedPriceDetails(value, locale);
+
+    if (details.discount) {
+      return `<span class="price-original">${escapeHtml(details.base)}</span><span class="price-discount">${escapeHtml(details.discount)}</span>`;
+    }
+
+    const price = details.base || (withFallback ? localizedPrice(value, true, locale) : '');
+    return price ? `<span class="price-current">${escapeHtml(price)}</span>` : '';
   }
 
   function pageTitle() {
@@ -331,7 +357,7 @@
       const title = lang === 'ar' ? titleAr : titleEn;
       const cardDescription = lang === 'ar' ? shortDescAr : shortDescEn;
       const price = localizedPrice(item.price);
-      const priceText = localizedPrice(item.price, true);
+      const priceText = priceMarkup(item.price, lang, true);
       const image = clean(item.image_url);
       const hasRealImage = image && !isDefaultItemImage(image);
       return `
@@ -342,7 +368,7 @@
           <div class="px-2 pointer-events-none">
             <div class="flex items-start justify-between gap-4 mb-3">
               <h3 class="text-xl font-black leading-7 text-start">${escapeHtml(title)}</h3>
-              <span class="text-restaurant font-black whitespace-nowrap text-lg">${escapeHtml(priceText)}</span>
+              <span class="item-price text-restaurant font-black text-lg">${priceText}</span>
             </div>
             <p class="text-gray-500 dark:text-gray-400 text-sm leading-7 mb-6 min-h-[52px] text-start">${escapeHtml(cardDescription)}</p>
             <button type="button" class="w-full py-3 bg-restaurant text-white rounded-xl font-bold shadow-md shadow-main transition-all hover:bg-restaurant-hover">${escapeHtml(T[lang].order)}</button>
@@ -545,7 +571,11 @@
 
     setText('modalItemName', name);
     setText('modalItemDesc', desc);
-    setText('modalItemPrice', priceText);
+    const modalPrice = $('modalItemPrice');
+    if (modalPrice) {
+      const item = allItems().find(menuItem => String(menuItem.id) === String(activeModalItemId));
+      modalPrice.innerHTML = item ? priceMarkup(item.price, modalLang, true) : escapeHtml(priceText);
+    }
     setText('modalOrderText', T[modalLang].modalOrder);
 
     const image = $('modalItemImg');

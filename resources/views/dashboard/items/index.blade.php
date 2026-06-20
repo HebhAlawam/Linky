@@ -167,7 +167,13 @@
 
                     {{-- السعر --}}
                     <td>
-                        {{ $item->price_text }}
+                        @php($priceDetails = $item->localizedPriceDetails('ar'))
+                        @if ($priceDetails['discount'] !== '')
+                            <span class="d-block small text-secondary text-decoration-line-through">{{ $priceDetails['base'] }}</span>
+                            <span class="fw-bold text-primary">{{ $priceDetails['discount'] }}</span>
+                        @else
+                            {{ $item->price_text }}
+                        @endif
                     </td>
 
                     {{-- القسم --}}

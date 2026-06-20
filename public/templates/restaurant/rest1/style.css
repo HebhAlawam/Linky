@@ -406,6 +406,24 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
   font-size: 1.1rem; color: var(--primary);
   white-space: nowrap;
 }
+.menu-card-price,
+.dish-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  max-width: 100%;
+}
+.price-original {
+  color: var(--fg-muted);
+  font-size: 0.72em;
+  font-weight: 400;
+  text-decoration: line-through;
+}
+.price-discount {
+  color: var(--primary);
+  font-weight: 700;
+}
 .menu-card-desc {
   font-size: 0.875rem; color: var(--fg-muted);
   line-height: 1.65; flex: 1;

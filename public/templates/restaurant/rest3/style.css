@@ -656,6 +656,10 @@ html[dir="ltr"] .hero-content {
 }
 
 .price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   color: var(--primary-color);
   font-size: 0.98rem;
   font-weight: 900;
@@ -663,6 +667,27 @@ html[dir="ltr"] .hero-content {
   transition:
     color 250ms ease,
     transform 250ms ease;
+}
+
+.price-original,
+.item-modal-price .price-original {
+  color: var(--muted);
+  font-size: 0.78em;
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.price-discount,
+.item-modal-price .price-discount {
+  color: var(--primary-hover);
+  font-weight: 900;
+}
+
+.item-modal-price {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .product-card:hover .price,

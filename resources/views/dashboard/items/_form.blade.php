@@ -12,6 +12,11 @@
     $defaultPriceEn = is_array($priceValue) ? ($priceValue['en'] ?? '') : '';
     $priceAr = old('price_ar', $defaultPriceAr);
     $priceEn = old('price_en', $defaultPriceEn);
+    $discountPriceValue = is_array($priceValue) && is_array($priceValue['discount_price'] ?? null)
+        ? $priceValue['discount_price']
+        : [];
+    $discountPriceAr = old('discount_price_ar', $discountPriceValue['ar'] ?? '');
+    $discountPriceEn = old('discount_price_en', $discountPriceValue['en'] ?? '');
 @endphp
 
 @if ($categories->isEmpty())
@@ -91,6 +96,20 @@
         <label class="form-label" for="price_en">السعر بالإنكليزي</label>
         <input type="text" id="price_en" name="price_en" value="{{ $priceEn }}" class="form-control @error('price_en') is-invalid @enderror" placeholder="SYP 25,000" dir="ltr" @disabled($categories->isEmpty())>
         @error('price_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label" for="discount_price_ar">السعر بعد الخصم بالعربي</label>
+        <input type="text" id="discount_price_ar" name="discount_price_ar" value="{{ $discountPriceAr }}" class="form-control @error('discount_price_ar') is-invalid @enderror" @disabled($categories->isEmpty())>
+        <div class="form-hint">اختياري — السعر النهائي الذي سيظهر للعميل بعد الخصم.</div>
+        @error('discount_price_ar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label" for="discount_price_en">السعر بعد الخصم بالإنكليزي</label>
+        <input type="text" id="discount_price_en" name="discount_price_en" value="{{ $discountPriceEn }}" class="form-control @error('discount_price_en') is-invalid @enderror" dir="ltr" @disabled($categories->isEmpty())>
+        <div class="form-hint">اختياري — السعر النهائي الذي سيظهر للعميل بعد الخصم.</div>
+        @error('discount_price_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
 
     <div class="col-md-12">

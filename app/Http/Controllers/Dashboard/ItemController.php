@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Item;
 use App\Services\WebImageOptimizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
@@ -60,7 +61,12 @@ class ItemController extends Controller
             'title' => $this->translationData($data['title_ar'], $data['title_en'] ?? null),
             'short_description' => $this->translationData($data['short_description_ar'] ?? null, $data['short_description_en'] ?? null),
             'description' => $this->translationData($data['description_ar'] ?? null, $data['description_en'] ?? null),
-            'price' => $this->priceData($data['price_ar'] ?? null, $data['price_en'] ?? null),
+            'price' => $this->priceData(
+                $data['price_ar'] ?? null,
+                $data['price_en'] ?? null,
+                $data['discount_price_ar'] ?? null,
+                $data['discount_price_en'] ?? null,
+            ),
             'image' => null,
             'is_featured' => $request->boolean('is_featured'),
             'is_visible' => $request->boolean('is_visible', true),
@@ -113,7 +119,13 @@ class ItemController extends Controller
             'title' => $this->translationData($data['title_ar'], $data['title_en'] ?? null),
             'short_description' => $this->translationData($data['short_description_ar'] ?? null, $data['short_description_en'] ?? null),
             'description' => $this->translationData($data['description_ar'] ?? null, $data['description_en'] ?? null),
-            'price' => $this->priceData($data['price_ar'] ?? null, $data['price_en'] ?? null),
+            'price' => $this->priceData(
+                $data['price_ar'] ?? null,
+                $data['price_en'] ?? null,
+                $data['discount_price_ar'] ?? null,
+                $data['discount_price_en'] ?? null,
+                $item->price,
+            ),
             'is_featured' => $request->boolean('is_featured'),
             'is_visible' => $request->boolean('is_visible', true),
             'action_type' => 'internal',
@@ -187,7 +199,7 @@ class ItemController extends Controller
 
     private function validateItem(Request $request, int $pageId): array
     {
-        return $request->validate([
+        $validator = Validator::make($request->all(), [
             'title_ar' => ['required', 'string', 'max:255'],
             'title_en' => ['nullable', 'string', 'max:255'],
             'short_description_ar' => ['nullable', 'string', 'max:500'],
@@ -200,6 +212,8 @@ class ItemController extends Controller
             ],
             'price_ar' => ['nullable', 'string', 'max:255'],
             'price_en' => ['nullable', 'string', 'max:255'],
+            'discount_price_ar' => ['nullable', 'string', 'max:255'],
+            'discount_price_en' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'is_featured' => ['nullable', 'boolean'],
             'is_visible' => ['nullable', 'boolean'],
@@ -214,11 +228,152 @@ class ItemController extends Controller
             'category_id' => 'التصنيف',
             'price_ar' => 'السعر بالعربي',
             'price_en' => 'السعر بالإنكليزي',
+            'discount_price_ar' => 'السعر بعد الخصم بالعربي',
+            'discount_price_en' => 'السعر بعد الخصم بالإنكليزي',
             'image' => 'الصورة',
             'is_featured' => 'مميز',
             'is_visible' => 'الظهور',
             'display_order' => 'الترتيب',
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            foreach (['ar', 'en'] as $locale) {
+                $discountField = "discount_price_{$locale}";
+                $baseField = "price_{$locale}";
+
+                if ($validator->errors()->has($discountField) || $validator->errors()->has($baseField)) {
+                    continue;
+                }
+
+                $discount = trim((string) $request->input($discountField, ''));
+
+                if ($discount === '') {
+                    continue;
+                }
+
+                $base = trim((string) $request->input($baseField, ''));
+
+                if ($base === '') {
+                    $validator->errors()->add(
+                        $discountField,
+                        'يجب إدخال سعر أساسي رقمي قبل إضافة سعر بعد الخصم.',
+                    );
+
+                    continue;
+                }
+
+                $parsedBase = $this->parseComparablePrice($base);
+
+                if ($parsedBase === null) {
+                    $validator->errors()->add(
+                        $discountField,
+                        'يجب إدخال سعر أساسي رقمي قبل إضافة سعر بعد الخصم.',
+                    );
+
+                    continue;
+                }
+
+                $parsedDiscount = $this->parseComparablePrice($discount);
+
+                if ($parsedDiscount === null) {
+                    $validator->errors()->add(
+                        $discountField,
+                        'يجب إدخال سعر بعد الخصم بصيغة رقمية قابلة للمقارنة.',
+                    );
+
+                    continue;
+                }
+
+                if ($parsedDiscount >= $parsedBase) {
+                    $validator->errors()->add(
+                        $discountField,
+                        'يجب أن يكون السعر بعد الخصم أقل من السعر الأساسي.',
+                    );
+                }
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    private function parseComparablePrice(string $value): ?float
+    {
+        $value = strtr(trim($value), [
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        ]);
+
+        if (! preg_match(
+            '/(?<!\d)\d+(?:[\s\x{00A0},،٬.٫]\d+)*(?!\d)/u',
+            $value,
+            $matches,
+            PREG_OFFSET_CAPTURE,
+        )) {
+            return null;
+        }
+
+        [$numericText, $offset] = $matches[0];
+        $remainingText = substr($value, 0, $offset).substr($value, $offset + strlen($numericText));
+
+        if (preg_match('/\d/u', $remainingText)) {
+            return null;
+        }
+
+        $numericText = preg_replace('/[\s\x{00A0}]+/u', '', $numericText);
+        $numericText = strtr($numericText, ['،' => ',', '٬' => ',', '٫' => '.']);
+        $normalizedAmount = $this->normalizePriceAmount($numericText);
+
+        if ($normalizedAmount === null || ! is_numeric($normalizedAmount)) {
+            return null;
+        }
+
+        $amount = (float) $normalizedAmount;
+
+        if (! is_finite($amount)) {
+            return null;
+        }
+
+        return $amount;
+    }
+
+    private function normalizePriceAmount(string $value): ?string
+    {
+        if (preg_match('/^\d+$/', $value)) {
+            return $value;
+        }
+
+        $commaPosition = strrpos($value, ',');
+        $dotPosition = strrpos($value, '.');
+
+        if ($commaPosition !== false && $dotPosition !== false) {
+            $decimalSeparator = $commaPosition > $dotPosition ? ',' : '.';
+            $thousandsSeparator = $decimalSeparator === ',' ? '.' : ',';
+            [$integer, $decimal] = explode($decimalSeparator, $value, 2);
+
+            if (! preg_match('/^\d{1,3}(?:'.preg_quote($thousandsSeparator, '/').'\d{3})*$/', $integer)
+                || ! preg_match('/^\d+$/', $decimal)) {
+                return null;
+            }
+
+            return str_replace($thousandsSeparator, '', $integer).'.'.$decimal;
+        }
+
+        $separator = $commaPosition !== false ? ',' : '.';
+        $parts = explode($separator, $value);
+
+        if (count($parts) === 2 && strlen($parts[1]) <= 2) {
+            return preg_match('/^\d+$/', $parts[0]) && preg_match('/^\d+$/', $parts[1])
+                ? $parts[0].'.'.$parts[1]
+                : null;
+        }
+
+        if (! preg_match('/^\d{1,3}(?:'.preg_quote($separator, '/').'\d{3})+$/', $value)) {
+            return null;
+        }
+
+        return str_replace($separator, '', $value);
     }
 
     private function pageCategories(int $pageId)
@@ -250,9 +405,48 @@ class ItemController extends Controller
             ->all();
     }
 
-    private function priceData(?string $ar, ?string $en): ?array
+    private function priceData(
+        ?string $ar,
+        ?string $en,
+        mixed $discountAr = null,
+        mixed $discountEn = null,
+        mixed $existing = null,
+    ): ?array
     {
-        $price = $this->translationData($ar, $en);
+        $price = is_array($existing) ? $existing : [];
+
+        foreach (['ar' => $ar, 'en' => $en] as $locale => $value) {
+            $value = is_string($value) ? trim($value) : $value;
+
+            if (filled($value)) {
+                $price[$locale] = $value;
+            } else {
+                unset($price[$locale]);
+            }
+        }
+
+        $discountPrice = is_array($price['discount_price'] ?? null)
+            ? $price['discount_price']
+            : [];
+
+        foreach (['ar' => $discountAr, 'en' => $discountEn] as $locale => $value) {
+            $value = is_scalar($value) ? trim((string) $value) : '';
+
+            if ($value !== '') {
+                $discountPrice[$locale] = $value;
+            } else {
+                unset($discountPrice[$locale]);
+            }
+        }
+
+        $hasLocalizedDiscount = collect(['ar', 'en'])
+            ->contains(fn ($locale) => is_scalar($discountPrice[$locale] ?? null) && filled($discountPrice[$locale]));
+
+        if ($hasLocalizedDiscount) {
+            $price['discount_price'] = $discountPrice;
+        } else {
+            unset($price['discount_price']);
+        }
 
         return $price === [] ? null : $price;
     }

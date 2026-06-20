@@ -85,20 +85,39 @@ class Item extends Model
 
     public function localizedPriceText(string $locale = 'ar'): string
     {
+        return $this->localizedPriceDetails($locale)['base'];
+    }
+
+    public function localizedDiscountPriceText(string $locale = 'ar'): string
+    {
+        return $this->localizedPriceDetails($locale)['discount'];
+    }
+
+    public function localizedPriceDetails(string $locale = 'ar'): array
+    {
         $price = $this->price;
 
         if (is_string($price)) {
-            return trim($price);
+            return ['base' => trim($price), 'discount' => ''];
         }
 
-        if (is_array($price)) {
-            return trim((string) ($price[$locale] ?? ''))
-                ?: trim((string) ($price['ar'] ?? ''))
-                ?: trim((string) ($price['en'] ?? ''))
-                ?: trim((string) collect($price)->filter(fn ($value) => is_scalar($value) && filled($value))->first());
+        if (! is_array($price)) {
+            return ['base' => '', 'discount' => ''];
         }
 
-        return '';
+        $selectedLocale = collect([$locale, $locale === 'ar' ? 'en' : 'ar'])
+            ->first(fn ($candidate) => is_scalar($price[$candidate] ?? null) && filled($price[$candidate]));
+        $base = $selectedLocale ? trim((string) $price[$selectedLocale]) : '';
+        $discountValue = $selectedLocale && is_array($price['discount_price'] ?? null)
+            ? $price['discount_price'][$selectedLocale] ?? null
+            : null;
+        $discount = is_scalar($discountValue) ? trim((string) $discountValue) : '';
+
+        if ($base === '' || $discount === '') {
+            $discount = '';
+        }
+
+        return ['base' => $base, 'discount' => $discount];
     }
 
     public function getUrlAttribute()

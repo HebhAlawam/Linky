@@ -162,3 +162,100 @@ test('an SVG logo is stored unchanged', function () {
     expect($page->logo)->toEndWith('.svg')
         ->and(Storage::disk('public')->get($page->logo))->toBe($svg);
 });
+
+test('an item stores localized discount prices inside the existing price JSON', function () {
+    $user = User::factory()->create();
+    $page = testPage($user);
+    $category = Category::query()->create([
+        'page_id' => $page->id,
+        'name' => ['ar' => 'مشروبات'],
+        'slug' => 'discount-drinks',
+    ]);
+
+    $this->actingAs($user)->post(route('dashboard.items.store'), [
+        'title_ar' => 'قهوة مخفضة',
+        'category_id' => $category->id,
+        'price_ar' => '15000',
+        'price_en' => '5',
+        'discount_price_ar' => '12000',
+        'discount_price_en' => '4',
+    ])->assertRedirect(route('dashboard.items.index'));
+
+    expect(Item::query()->sole()->price)->toBe([
+        'ar' => '15000',
+        'en' => '5',
+        'discount_price' => [
+            'ar' => '12000',
+            'en' => '4',
+        ],
+    ]);
+});
+
+test('an equal or higher discount price is rejected', function () {
+    app()->setLocale('ar');
+    $user = User::factory()->create();
+    $page = testPage($user);
+    $category = Category::query()->create([
+        'page_id' => $page->id,
+        'name' => ['ar' => 'مشروبات'],
+        'slug' => 'invalid-discount-drinks',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('dashboard.items.create'))
+        ->post(route('dashboard.items.store'), [
+            'title_ar' => 'خصم غير صالح',
+            'category_id' => $category->id,
+            'price_ar' => '15000',
+            'price_en' => '5',
+            'discount_price_ar' => '15000',
+            'discount_price_en' => '6',
+        ])
+        ->assertRedirect(route('dashboard.items.create'))
+        ->assertSessionHasErrors([
+            'discount_price_ar' => 'يجب أن يكون السعر بعد الخصم أقل من السعر الأساسي.',
+            'discount_price_en' => 'يجب أن يكون السعر بعد الخصم أقل من السعر الأساسي.',
+        ]);
+
+    expect(Item::query()->count())->toBe(0);
+});
+
+test('removing discount prices keeps base prices and other JSON keys intact', function () {
+    $user = User::factory()->create();
+    $page = testPage($user);
+    $category = Category::query()->create([
+        'page_id' => $page->id,
+        'name' => ['ar' => 'مشروبات'],
+        'slug' => 'remove-discount-drinks',
+    ]);
+    $item = Item::query()->create([
+        'page_id' => $page->id,
+        'category_id' => $category->id,
+        'title' => ['ar' => 'عنصر'],
+        'slug' => 'discount-removal-item',
+        'price' => [
+            'ar' => '15000',
+            'en' => '5',
+            'tax_note' => 'preserve-me',
+            'discount_price' => [
+                'ar' => '12000',
+                'en' => '4',
+            ],
+        ],
+    ]);
+
+    $this->actingAs($user)->put(route('dashboard.items.update', $item), [
+        'title_ar' => 'عنصر',
+        'category_id' => $category->id,
+        'price_ar' => '15000',
+        'price_en' => '5',
+        'discount_price_ar' => '',
+        'discount_price_en' => '',
+    ])->assertRedirect(route('dashboard.items.index'));
+
+    expect($item->fresh()->price)->toBe([
+        'ar' => '15000',
+        'en' => '5',
+        'tax_note' => 'preserve-me',
+    ]);
+});

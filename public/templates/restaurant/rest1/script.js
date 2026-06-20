@@ -37,17 +37,47 @@ function getTranslated(obj, field, fallback = '') {
 }
 
 function getPrice(value, withFallback = false) {
-  let price = '';
-
-  if (value && typeof value === 'object') {
-    price = String(value[lang] || value[lang === 'ar' ? 'en' : 'ar'] || Object.values(value).find(Boolean) || '').trim();
-  } else if (typeof value === 'string') {
-    price = value.trim();
-  }
+  const details = priceDetails(value);
+  const price = details.discount || details.base;
 
   if (price || !withFallback) return price;
 
   return lang === 'ar' ? 'السعر عند الطلب' : 'Price on request';
+}
+
+function priceDetails(value, locale = lang) {
+  if (typeof value === 'string') {
+    return { base: value.trim(), discount: '' };
+  }
+
+  if (!value || typeof value !== 'object') {
+    return { base: '', discount: '' };
+  }
+
+  const selectedLocale = [locale, locale === 'ar' ? 'en' : 'ar']
+    .find(candidate => (typeof value[candidate] === 'string' || typeof value[candidate] === 'number')
+      && String(value[candidate]).trim() !== '');
+  const base = selectedLocale ? String(value[selectedLocale]).trim() : '';
+  const rawDiscount = selectedLocale && value.discount_price && typeof value.discount_price === 'object'
+    ? value.discount_price[selectedLocale]
+    : '';
+  const discount = typeof rawDiscount === 'string' || typeof rawDiscount === 'number'
+    ? String(rawDiscount).trim()
+    : '';
+  const hasValidDiscount = base !== '' && discount !== '';
+
+  return { base, discount: hasValidDiscount ? discount : '' };
+}
+
+function priceMarkup(value, withFallback = true) {
+  const details = priceDetails(value);
+
+  if (details.discount) {
+    return `<span class="price-original">${escapeHtml(details.base)}</span><span class="price-discount">${escapeHtml(details.discount)}</span>`;
+  }
+
+  const price = details.base || (withFallback ? getPrice(value, true) : '');
+  return price ? `<span class="price-current">${escapeHtml(price)}</span>` : '';
 }
 
 function pageTitle() {
@@ -236,7 +266,7 @@ function renderMenu() {
     const desc = getTranslated(item, 'short_description', getTranslated(item, 'description'));
     const image = item.image_url || FALLBACKS.itemImage;
     const hasRealImage = image && !isDefaultItemImage(image);
-    const price = getPrice(item.price, true);
+    const price = priceMarkup(item.price, true);
 
     return `
       <div class="menu-card" onclick="openDish('${item.id}')" style="animation-delay:${idx * 0.05}s">
@@ -249,7 +279,7 @@ function renderMenu() {
         <div class="menu-card-body">
           <div class="menu-card-top">
             <h3>${escapeHtml(title)}</h3>
-            <span class="menu-card-price">${escapeHtml(price)}</span>
+            <span class="menu-card-price">${price}</span>
           </div>
           <p>${escapeHtml(desc)}</p>
         </div>
@@ -501,7 +531,7 @@ function openDish(id) {
   document.getElementById('dishImg').src = item.image_url || FALLBACKS.itemImage;
   document.getElementById('dishName').textContent = title;
   document.getElementById('dishDesc').textContent = desc;
-  document.getElementById('dishPrice').textContent = price;
+  document.getElementById('dishPrice').innerHTML = priceMarkup(item.price, true);
   document.getElementById('dishBadge').textContent = catName;
 
   configureOrderLink(item, title);

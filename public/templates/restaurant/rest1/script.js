@@ -904,8 +904,10 @@ function cartMessage() {
   const total = cartTotal(rows);
   const restaurant = pageTitle();
   const lines = rows.map((row, index) => {
-    const subtotal = row.subtotal === null ? '' : ` — ${formattedAmount(row.subtotal, row.parsed.label)}`;
-    return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${row.price || getPrice(row.item.price, true)}${subtotal}`;
+    const linePrice = row.subtotal === null
+      ? row.price || getPrice(row.item.price, true)
+      : formattedAmount(row.subtotal, row.parsed.label);
+    return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${linePrice}`;
   });
   const note = cart.note.trim();
   if (lang === 'ar') {

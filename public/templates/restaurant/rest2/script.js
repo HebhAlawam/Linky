@@ -909,8 +909,10 @@
     const rows = cartRows();
     const total = cartTotal(rows);
     const lines = rows.map((row, index) => {
-      const subtotal = row.subtotal === null ? '' : ` — ${formattedAmount(row.subtotal, row.parsed.label)}`;
-      return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${row.price || localizedPrice(row.item.price, true)}${subtotal}`;
+      const linePrice = row.subtotal === null
+        ? row.price || localizedPrice(row.item.price, true)
+        : formattedAmount(row.subtotal, row.parsed.label);
+      return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${linePrice}`;
     });
     const note = cart.note.trim();
     if (lang === 'ar') return [`مرحبًا، أود طلب المنتجات التالية من ${pageTitle()}:`, '', ...lines, ...(note ? ['', 'ملاحظات:', note] : []), '', total ? `المجموع: ${formattedAmount(total.amount, total.label)}` : CART_TEXT.ar.confirmTotal, '', 'يرجى تأكيد الطلب والسعر النهائي، شكرًا.'].join('\n');

@@ -97,6 +97,10 @@
                 <span id="navTitle" class="text-xl font-black text-restaurant truncate"></span>
             </button>
             <div class="flex gap-3">
+                <button type="button" id="cartTrigger" class="cart-trigger p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-restaurant hover:text-white transition-colors" hidden>
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart-count" id="cartCount" hidden></span>
+                </button>
                 <button type="button" onclick="shareSite()" id="shareButton" class="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-restaurant hover:text-white transition-colors" aria-label="Share site">
                     <i class="fa-solid fa-share-nodes"></i>
                 </button>
@@ -211,12 +215,42 @@
                     <span id="modalItemPrice" class="text-restaurant font-black text-xl whitespace-nowrap"></span>
                 </div>
                 <p id="modalItemDesc" class="text-gray-500 dark:text-gray-400 whitespace-pre-line mb-6"></p>
-                <a id="modalOrderLink" href="#" target="_blank" rel="noopener" class="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-restaurant text-white font-bold hover:bg-restaurant-hover transition-all">
-                    <i class="fa-brands fa-whatsapp"></i>
-                    <span id="modalOrderText">اطلب عبر واتساب</span>
-                </a>
+                <div class="item-cart-actions">
+                    <div class="cart-quantity" id="itemQuantityControl">
+                        <button type="button" id="itemQtyMinus" aria-label="تقليل الكمية">−</button>
+                        <span id="itemQuantity">1</span>
+                        <button type="button" id="itemQtyPlus" aria-label="زيادة الكمية">+</button>
+                    </div>
+                    <button id="itemAddToCart" type="button" class="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-restaurant text-white font-bold hover:bg-restaurant-hover transition-all"></button>
+                    <div class="cart-add-feedback" id="itemCartFeedback" role="status" aria-live="polite" hidden>
+                        <span id="itemCartFeedbackText"></span>
+                        <button type="button" id="itemViewCart"></button>
+                    </div>
+                    <p id="itemCartUnavailable" class="text-sm text-gray-500 dark:text-gray-400" hidden></p>
+                </div>
             </div>
         </div>
+    </div>
+
+    <div class="cart-drawer" id="cartDrawer" aria-hidden="true" hidden>
+        <div class="cart-overlay" id="cartOverlay"></div>
+        <aside class="cart-panel" id="cartPanel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+            <div class="cart-header">
+                <h2 id="cartTitle"></h2>
+                <button type="button" class="cart-close" id="cartClose" aria-label="إغلاق">×</button>
+            </div>
+            <div class="cart-body">
+                <p class="cart-empty" id="cartEmpty"></p>
+                <div class="cart-items" id="cartItems"></div>
+                <button type="button" class="cart-clear" id="cartClear"></button>
+                <label class="cart-note-label" for="cartNote" id="cartNoteLabel"></label>
+                <textarea id="cartNote" class="cart-note" rows="3" maxlength="1000"></textarea>
+            </div>
+            <div class="cart-footer">
+                <div class="cart-summary" id="cartSummary"></div>
+                <button type="button" class="cart-submit" id="cartSubmit"></button>
+            </div>
+        </aside>
     </div>
 
     <script src="{{ asset('templates/restaurant/rest2/script.js') }}?v={{ filemtime(public_path('templates/restaurant/rest2/script.js')) }}"></script>

@@ -22,7 +22,7 @@
       hours: 'مواعيد العمل',
       links: 'تواصل',
       social: 'تابعنا',
-      order: 'اطلب',
+      order: 'عرض التفاصيل',
       modalOrder: 'اطلب عبر واتساب',
       modalCall: 'اتصل للطلب',
       priceOnRequest: 'السعر عند الطلب',
@@ -50,7 +50,7 @@
       hours: 'Working Hours',
       links: 'Contact',
       social: 'Follow Us',
-      order: 'Order',
+      order: 'View details',
       modalOrder: 'Order via WhatsApp',
       modalCall: 'Call to order',
       priceOnRequest: 'Price on request',
@@ -70,6 +70,7 @@
   let lang = localStorage.getItem('linky_rest2_lang') || app.lang || 'ar';
   let activeCategory = 'all';
   let activeModalItemId = null;
+  let itemQuantity = 1;
 
   const $ = (id) => document.getElementById(id);
   const clean = (value) => String(value || '').trim();
@@ -187,6 +188,8 @@
     localStorage.setItem('linky_rest2_lang', lang);
     syncDirection();
     renderAll();
+    renderCart();
+    if (activeModalItemId) renderItemCartActions();
   };
 
   window.scrollToTop = function scrollToTop() {
@@ -568,6 +571,9 @@
     const priceText = price || T[modalLang].priceOnRequest;
     const img = clean(card.dataset.img);
     activeModalItemId = card.dataset.id || null;
+    const existingCartItem = cart.items.find(entry => String(entry.id) === String(activeModalItemId));
+    itemQuantity = existingCartItem ? existingCartItem.quantity : 1;
+    if ($('itemCartFeedback')) $('itemCartFeedback').hidden = true;
 
     setText('modalItemName', name);
     setText('modalItemDesc', desc);
@@ -576,7 +582,6 @@
       const item = allItems().find(menuItem => String(menuItem.id) === String(activeModalItemId));
       modalPrice.innerHTML = item ? priceMarkup(item.price, modalLang, true) : escapeHtml(priceText);
     }
-    setText('modalOrderText', T[modalLang].modalOrder);
 
     const image = $('modalItemImg');
     if (image) {
@@ -585,18 +590,7 @@
       image.classList.toggle('hidden', !img);
     }
 
-    const orderLink = $('modalOrderLink');
-    const orderTarget = modalOrderTarget(name, price, modalLang);
-    if (orderLink && orderTarget.url) {
-      orderLink.href = orderTarget.url;
-      orderLink.classList.remove('hidden');
-      const icon = orderLink.querySelector('i');
-      if (icon) icon.className = orderTarget.type === 'phone' ? 'fa-solid fa-phone' : 'fa-brands fa-whatsapp';
-      setText('modalOrderText', orderTarget.type === 'phone' ? T[modalLang].modalCall : T[modalLang].modalOrder);
-    } else if (orderLink) {
-      orderLink.classList.add('hidden');
-      orderLink.removeAttribute('href');
-    }
+    renderItemCartActions();
 
     const modal = $('itemModal');
     const panel = $('itemModalPanel');
@@ -623,7 +617,7 @@
     panel.classList.add('scale-95');
     panel.classList.remove('scale-100');
     modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('overflow-hidden');
+    if (!$('cartDrawer')?.classList.contains('open')) document.body.classList.remove('overflow-hidden');
     activeModalItemId = null;
   };
 
@@ -691,11 +685,271 @@
     if (id) trackPublicClick(`/track/item-order/${id}`);
   }
 
+  const CART_TEXT = {
+    ar: {
+      title: 'سلة التسوق', empty: 'سلتك فارغة', clear: 'إفراغ السلة', notes: 'ملاحظات على الطلب',
+      add: 'أضف إلى السلة', update: 'تحديث السلة', added: 'تمت الإضافة إلى السلة', updated: 'تم تحديث السلة', view: 'عرض السلة', remove: 'إزالة',
+      total: 'المجموع', submit: 'إرسال الطلب عبر واتساب', unavailable: 'لا توجد وسيلة طلب عبر واتساب متاحة حاليًا.', close: 'إغلاق',
+      confirmTotal: 'يتم تأكيد المجموع النهائي عبر واتساب.', decrease: 'تقليل الكمية', increase: 'زيادة الكمية', cart: 'فتح سلة التسوق'
+    },
+    en: {
+      title: 'Shopping Cart', empty: 'Your cart is empty', clear: 'Clear cart', notes: 'Order notes',
+      add: 'Add to cart', update: 'Update cart', added: 'Added to cart', updated: 'Cart updated', view: 'View cart', remove: 'Remove',
+      total: 'Total', submit: 'Send order via WhatsApp', unavailable: 'WhatsApp ordering is not available right now.', close: 'Close',
+      confirmTotal: 'The final total will be confirmed via WhatsApp.', decrease: 'Decrease quantity', increase: 'Increase quantity', cart: 'Open shopping cart'
+    }
+  };
+
+  let cart = { items: [], note: '' };
+  let cartOpener = null;
+  const cartStorageKey = `linky_cart_v1_${clean(page.id || page.slug || window.location.pathname).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+  function cartWhatsappLink() {
+    return links.find(link => link.type === 'whatsapp' && buildWhatsAppUrl(link.url, ''));
+  }
+
+  function safeLoadCart() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(cartStorageKey) || '{}');
+      return { items: Array.isArray(parsed.items) ? parsed.items : [], note: typeof parsed.note === 'string' ? parsed.note : '' };
+    } catch (error) {
+      return { items: [], note: '' };
+    }
+  }
+
+  function safeSaveCart() {
+    try { localStorage.setItem(cartStorageKey, JSON.stringify(cart)); } catch (error) {}
+  }
+
+  function cleanCart() {
+    const available = new Set(allItems().map(item => String(item.id)));
+    const merged = new Map();
+    cart.items.forEach(entry => {
+      const id = String(entry?.id ?? '');
+      const quantity = Number(entry?.quantity);
+      if (!available.has(id) || !Number.isInteger(quantity) || quantity < 1) return;
+      merged.set(id, Math.min(99, (merged.get(id) || 0) + quantity));
+    });
+    cart.items = [...merged].map(([id, quantity]) => ({ id, quantity }));
+    cart.note = typeof cart.note === 'string' ? cart.note.slice(0, 1000) : '';
+    if (!cart.items.length) cart.note = '';
+    safeSaveCart();
+  }
+
+  function cartItem(id) {
+    return allItems().find(item => String(item.id) === String(id));
+  }
+
+  function effectivePrice(item) {
+    const details = localizedPriceDetails(item?.price, lang);
+    return details.discount || details.base || '';
+  }
+
+  function parseCartPrice(text) {
+    const normalized = clean(text).replace(/[٠-٩۰-۹]/g, digit => {
+      const arabic = '٠١٢٣٤٥٦٧٨٩'.indexOf(digit);
+      return String(arabic >= 0 ? arabic : '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit));
+    });
+    const match = normalized.match(/\d+(?:[\s\u00a0,،٬.٫]\d+)*/u);
+    if (!match) return null;
+    let numeric = match[0].replace(/[\s\u00a0]/gu, '').replace(/[،٬]/gu, ',').replace(/٫/gu, '.');
+    const comma = numeric.lastIndexOf(',');
+    const dot = numeric.lastIndexOf('.');
+    if (comma >= 0 && dot >= 0) {
+      const decimal = comma > dot ? ',' : '.';
+      numeric = numeric.replaceAll(decimal === ',' ? '.' : ',', '').replace(decimal, '.');
+    } else {
+      const separator = comma >= 0 ? ',' : dot >= 0 ? '.' : '';
+      if (separator) {
+        const parts = numeric.split(separator);
+        numeric = parts.length === 2 && parts[1].length <= 2 ? `${parts[0]}.${parts[1]}` : parts.join('');
+      }
+    }
+    const amount = Number(numeric);
+    if (!Number.isFinite(amount)) return null;
+    const label = `${normalized.slice(0, match.index)}${normalized.slice((match.index || 0) + match[0].length)}`.trim();
+    return { amount, label, normalizedLabel: label.toLowerCase().replace(/[\s.,،٬٫\-_/\\()[\]{}]+/gu, '') };
+  }
+
+  function formattedAmount(amount, label) {
+    const number = new Intl.NumberFormat(lang === 'ar' ? 'ar' : 'en', { maximumFractionDigits: 2 }).format(amount);
+    return label ? `${number} ${label}` : number;
+  }
+
+  function cartRows() {
+    return cart.items.map(entry => {
+      const item = cartItem(entry.id);
+      if (!item) return null;
+      const price = effectivePrice(item);
+      const parsed = parseCartPrice(price);
+      return { entry, item, price, parsed, subtotal: parsed ? parsed.amount * entry.quantity : null };
+    }).filter(Boolean);
+  }
+
+  function cartTotal(rows) {
+    if (!rows.length || rows.some(row => !row.parsed)) return null;
+    const label = rows[0].parsed.normalizedLabel;
+    if (rows.some(row => row.parsed.normalizedLabel !== label)) return null;
+    return { amount: rows.reduce((sum, row) => sum + row.subtotal, 0), label: rows[0].parsed.label };
+  }
+
+  function renderItemCartActions() {
+    const enabled = Boolean(cartWhatsappLink());
+    const control = $('itemQuantityControl');
+    const add = $('itemAddToCart');
+    const unavailable = $('itemCartUnavailable');
+    if (control) control.hidden = !enabled;
+    if (add) {
+      add.hidden = !enabled;
+      const exists = activeModalItemId && cart.items.some(entry => String(entry.id) === String(activeModalItemId));
+      add.textContent = exists ? CART_TEXT[lang].update : CART_TEXT[lang].add;
+    }
+    if (unavailable) {
+      unavailable.hidden = enabled;
+      unavailable.textContent = CART_TEXT[lang].unavailable;
+    }
+    setText('itemQuantity', itemQuantity);
+    $('itemQtyMinus')?.setAttribute('aria-label', CART_TEXT[lang].decrease);
+    $('itemQtyPlus')?.setAttribute('aria-label', CART_TEXT[lang].increase);
+  }
+
+  function renderCart() {
+    cleanCart();
+    const enabled = Boolean(cartWhatsappLink());
+    const trigger = $('cartTrigger');
+    if (trigger) {
+      trigger.hidden = !enabled;
+      trigger.setAttribute('aria-label', CART_TEXT[lang].cart);
+    }
+    const count = cart.items.reduce((sum, entry) => sum + entry.quantity, 0);
+    const badge = $('cartCount');
+    if (badge) {
+      badge.textContent = count;
+      badge.hidden = count === 0;
+    }
+    setText('cartTitle', CART_TEXT[lang].title);
+    setText('cartEmpty', CART_TEXT[lang].empty);
+    setText('cartClear', CART_TEXT[lang].clear);
+    setText('cartNoteLabel', CART_TEXT[lang].notes);
+    setText('cartSubmit', CART_TEXT[lang].submit);
+    $('cartClose')?.setAttribute('aria-label', CART_TEXT[lang].close);
+    const note = $('cartNote');
+    if (note && note.value !== cart.note) note.value = cart.note;
+    const rows = cartRows();
+    if ($('cartEmpty')) $('cartEmpty').hidden = rows.length > 0;
+    if ($('cartClear')) $('cartClear').hidden = rows.length === 0;
+    if ($('cartItems')) $('cartItems').innerHTML = rows.map(row => {
+      const title = getTranslated(row.item, 'title');
+      const image = clean(row.item.image_url) || '/images/defaults/item.svg';
+      const subtotal = row.subtotal === null ? '' : `<small>${escapeHtml(formattedAmount(row.subtotal, row.parsed.label))}</small>`;
+      return `<article class="cart-row" data-cart-id="${escapeAttr(row.entry.id)}"><img src="${escapeAttr(image)}" alt="" onerror="this.src='/images/defaults/item.svg'"><div class="cart-row-main"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(row.price || localizedPrice(row.item.price, true))}</span>${subtotal}<div class="cart-row-actions"><div class="cart-quantity"><button type="button" data-cart-minus aria-label="${escapeAttr(CART_TEXT[lang].decrease)}">−</button><span>${row.entry.quantity}</span><button type="button" data-cart-plus aria-label="${escapeAttr(CART_TEXT[lang].increase)}">+</button></div><button type="button" class="cart-remove" data-cart-remove>${escapeHtml(CART_TEXT[lang].remove)}</button></div></div></article>`;
+    }).join('');
+    const total = cartTotal(rows);
+    if ($('cartSummary')) $('cartSummary').textContent = !rows.length
+      ? ''
+      : total
+        ? `${CART_TEXT[lang].total}: ${formattedAmount(total.amount, total.label)}`
+        : CART_TEXT[lang].confirmTotal;
+    if ($('cartSubmit')) $('cartSubmit').disabled = !enabled || rows.length === 0;
+  }
+
+  function changeCartQuantity(id, delta) {
+    const entry = cart.items.find(item => String(item.id) === String(id));
+    if (!entry) return;
+    const next = entry.quantity + delta;
+    if (next < 1) cart.items = cart.items.filter(item => String(item.id) !== String(id));
+    else entry.quantity = Math.min(99, next);
+    if (!cart.items.length) cart.note = '';
+    safeSaveCart();
+    renderCart();
+  }
+
+  function addActiveItemToCart() {
+    const item = cartItem(activeModalItemId);
+    if (!item || !cartWhatsappLink()) return;
+    const id = String(item.id);
+    const existing = cart.items.find(entry => String(entry.id) === id);
+    const isUpdate = Boolean(existing);
+    if (existing) existing.quantity = Math.min(99, Math.max(1, itemQuantity));
+    else cart.items.push({ id, quantity: itemQuantity });
+    safeSaveCart();
+    renderCart();
+    renderItemCartActions();
+    setText('itemCartFeedbackText', isUpdate ? CART_TEXT[lang].updated : CART_TEXT[lang].added);
+    setText('itemViewCart', CART_TEXT[lang].view);
+    if ($('itemCartFeedback')) $('itemCartFeedback').hidden = false;
+  }
+
+  function openCart(event) {
+    if (!cartWhatsappLink()) return;
+    cartOpener = event?.currentTarget?.id === 'itemViewCart'
+      ? $('cartTrigger')
+      : event?.currentTarget || document.activeElement;
+    const drawer = $('cartDrawer');
+    if (!drawer) return;
+    drawer.hidden = false;
+    drawer.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => drawer.classList.add('open'));
+    document.body.classList.add('overflow-hidden');
+    renderCart();
+    $('cartClose')?.focus();
+  }
+
+  function closeCart() {
+    const drawer = $('cartDrawer');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    setTimeout(() => { if (!drawer.classList.contains('open')) drawer.hidden = true; }, 200);
+    if ($('itemModal')?.getAttribute('aria-hidden') !== 'false') document.body.classList.remove('overflow-hidden');
+    cartOpener?.focus?.();
+  }
+
+  function cartMessage() {
+    const rows = cartRows();
+    const total = cartTotal(rows);
+    const lines = rows.map((row, index) => {
+      const subtotal = row.subtotal === null ? '' : ` — ${formattedAmount(row.subtotal, row.parsed.label)}`;
+      return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${row.price || localizedPrice(row.item.price, true)}${subtotal}`;
+    });
+    const note = cart.note.trim();
+    if (lang === 'ar') return [`مرحبًا، أود طلب المنتجات التالية من ${pageTitle()}:`, '', ...lines, ...(note ? ['', 'ملاحظات:', note] : []), '', total ? `المجموع: ${formattedAmount(total.amount, total.label)}` : CART_TEXT.ar.confirmTotal, '', 'يرجى تأكيد الطلب والسعر النهائي، شكرًا.'].join('\n');
+    return [`Hello, I would like to order the following items from ${pageTitle()}:`, '', ...lines, ...(note ? ['', 'Notes:', note] : []), '', total ? `Total: ${formattedAmount(total.amount, total.label)}` : CART_TEXT.en.confirmTotal, '', 'Please confirm the order and final total. Thank you.'].join('\n');
+  }
+
+  function initCart() {
+    cart = safeLoadCart();
+    cleanCart();
+    renderCart();
+    $('cartTrigger')?.addEventListener('click', openCart);
+    $('cartClose')?.addEventListener('click', closeCart);
+    $('cartOverlay')?.addEventListener('click', closeCart);
+    $('itemQtyMinus')?.addEventListener('click', () => { itemQuantity = Math.max(1, itemQuantity - 1); renderItemCartActions(); });
+    $('itemQtyPlus')?.addEventListener('click', () => { itemQuantity = Math.min(99, itemQuantity + 1); renderItemCartActions(); });
+    $('itemAddToCart')?.addEventListener('click', addActiveItemToCart);
+    $('itemViewCart')?.addEventListener('click', event => { closeItemModal(); openCart(event); });
+    $('cartClear')?.addEventListener('click', () => { cart = { items: [], note: '' }; safeSaveCart(); renderCart(); });
+    $('cartNote')?.addEventListener('input', event => { cart.note = event.target.value.slice(0, 1000); safeSaveCart(); });
+    $('cartItems')?.addEventListener('click', event => {
+      const row = event.target.closest('[data-cart-id]');
+      if (!row) return;
+      if (event.target.closest('[data-cart-minus]')) changeCartQuantity(row.dataset.cartId, -1);
+      if (event.target.closest('[data-cart-plus]')) changeCartQuantity(row.dataset.cartId, 1);
+      if (event.target.closest('[data-cart-remove]')) { cart.items = cart.items.filter(item => String(item.id) !== row.dataset.cartId); if (!cart.items.length) cart.note = ''; safeSaveCart(); renderCart(); }
+    });
+    $('cartSubmit')?.addEventListener('click', () => {
+      const whatsapp = cartWhatsappLink();
+      if (!whatsapp || !cart.items.length) return;
+      cart.items.forEach(entry => trackItemOrderClick(entry.id));
+      window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && $('cartDrawer')?.classList.contains('open')) closeCart();
+    });
+  }
+
   function bindModalEvents() {
     $('itemModalBackdrop')?.addEventListener('click', closeItemModal);
-    $('modalOrderLink')?.addEventListener('click', () => {
-      if (activeModalItemId) trackItemOrderClick(activeModalItemId);
-    });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeItemModal();
     });
@@ -713,5 +967,6 @@
   applyTheme();
   syncDirection();
   bindModalEvents();
+  initCart();
   renderAll();
 })();

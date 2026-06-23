@@ -86,6 +86,7 @@
         </nav>
 
         <div class="header-actions">
+          <button class="icon-button cart-trigger" id="cartTrigger" type="button" hidden><i class="ti ti-shopping-cart" aria-hidden="true"></i><span class="cart-count" id="cartCount" hidden></span></button>
           <button class="icon-button" id="shareButton" type="button" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
           <button class="icon-button" id="langToggle" type="button" aria-label="تغيير اللغة">EN</button>
           <button class="icon-button theme-toggle" id="themeToggle" type="button" aria-label="تبديل المظهر">◐</button>
@@ -159,10 +160,42 @@
           <h2 id="itemModalTitle"></h2>
           <p id="itemModalDescription"></p>
           <strong class="item-modal-price" id="itemModalPrice"></strong>
-          <p class="item-modal-unavailable" id="itemModalUnavailable" hidden></p>
-          <button class="add-button item-modal-order" id="itemModalOrder" type="button"></button>
+          <div class="item-cart-actions">
+            <div class="cart-quantity" id="itemQuantityControl">
+              <button type="button" id="itemQtyMinus" aria-label="تقليل الكمية">−</button>
+              <span id="itemQuantity">1</span>
+              <button type="button" id="itemQtyPlus" aria-label="زيادة الكمية">+</button>
+            </div>
+            <button class="add-button item-modal-order" id="itemAddToCart" type="button"></button>
+            <div class="cart-add-feedback" id="itemCartFeedback" role="status" aria-live="polite" hidden>
+              <span id="itemCartFeedbackText"></span>
+              <button type="button" id="itemViewCart"></button>
+            </div>
+            <p class="item-modal-unavailable" id="itemCartUnavailable" hidden></p>
+          </div>
         </div>
       </div>
+    </div>
+
+    <div class="cart-drawer" id="cartDrawer" aria-hidden="true" hidden>
+      <div class="cart-overlay" id="cartOverlay"></div>
+      <aside class="cart-panel" id="cartPanel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+        <div class="cart-header">
+          <h2 id="cartTitle"></h2>
+          <button type="button" class="cart-close" id="cartClose" aria-label="إغلاق">×</button>
+        </div>
+        <div class="cart-body">
+          <p class="cart-empty" id="cartEmpty"></p>
+          <div class="cart-items" id="cartItems"></div>
+          <button type="button" class="cart-clear" id="cartClear"></button>
+          <label class="cart-note-label" for="cartNote" id="cartNoteLabel"></label>
+          <textarea id="cartNote" class="cart-note" rows="3" maxlength="1000"></textarea>
+        </div>
+        <div class="cart-footer">
+          <div class="cart-summary" id="cartSummary"></div>
+          <button type="button" class="cart-submit" id="cartSubmit"></button>
+        </div>
+      </aside>
     </div>
 
     <script src="{{ asset('templates/restaurant/rest3/script.js') }}?v={{ filemtime(public_path('templates/restaurant/rest3/script.js')) }}"></script>

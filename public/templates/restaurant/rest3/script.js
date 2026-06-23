@@ -65,6 +65,7 @@
   let currentSlide = 0;
   let activeCategory = 'all';
   let sliderTimer = null;
+  let itemQuantity = 1;
 
   const $ = (selector) => document.querySelector(selector);
   const clean = (value) => String(value || '').trim();
@@ -482,8 +483,6 @@
     const title = getTranslated(activeModalItem, 'title');
     const description = getTranslated(activeModalItem, 'description') || getTranslated(activeModalItem, 'short_description');
     const category = getTranslated(activeModalItem.category, 'name');
-    const price = localizedPrice(activeModalItem.price);
-    const target = orderTarget(title, price);
 
     const image = $('#itemModalImage');
     const imageFallback = $('#itemModalImageFallback');
@@ -510,24 +509,16 @@
     setText('#itemModalDescription', description);
     const modalPrice = $('#itemModalPrice');
     if (modalPrice) modalPrice.innerHTML = priceMarkup(activeModalItem.price, true);
-    setText('#itemModalOrder', T[lang].orderNow);
-    setText('#itemModalUnavailable', T[lang].orderUnavailable);
-
-    const orderButton = $('#itemModalOrder');
-    const unavailable = $('#itemModalUnavailable');
-    if (orderButton) {
-      orderButton.hidden = !target;
-      orderButton.disabled = !target;
-      orderButton.dataset.target = target || '';
-      orderButton.dataset.itemId = activeModalItem.id || '';
-    }
-    if (unavailable) unavailable.hidden = Boolean(target);
+    renderItemCartActions();
   }
 
   function openItemModal(id) {
     const item = itemById(id);
     if (!item || !itemModal) return;
     activeModalItem = item;
+    const existingCartItem = cart.items.find(entry => String(entry.id) === String(item.id));
+    itemQuantity = existingCartItem ? existingCartItem.quantity : 1;
+    if ($('#itemCartFeedback')) $('#itemCartFeedback').hidden = true;
     renderItemModal();
     itemModal.hidden = false;
     itemModal.setAttribute('aria-hidden', 'false');
@@ -543,7 +534,7 @@
     }
     itemModal.classList.remove('is-open');
     itemModal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
+    if (!$('#cartDrawer')?.classList.contains('open')) document.body.style.overflow = '';
     setTimeout(() => {
       if (!itemModal.classList.contains('is-open')) {
         itemModal.hidden = true;
@@ -788,6 +779,264 @@
     if (id) trackPublicClick(`/track/item-order/${id}`);
   }
 
+  const CART_TEXT = {
+    ar: {
+      title: 'سلة التسوق', empty: 'سلتك فارغة', clear: 'إفراغ السلة', notes: 'ملاحظات على الطلب',
+      add: 'أضف إلى السلة', update: 'تحديث السلة', added: 'تمت الإضافة إلى السلة', updated: 'تم تحديث السلة', view: 'عرض السلة', remove: 'إزالة',
+      total: 'المجموع', submit: 'إرسال الطلب عبر واتساب', unavailable: 'لا توجد وسيلة طلب عبر واتساب متاحة حاليًا.', close: 'إغلاق',
+      confirmTotal: 'يتم تأكيد المجموع النهائي عبر واتساب.', decrease: 'تقليل الكمية', increase: 'زيادة الكمية', cart: 'فتح سلة التسوق'
+    },
+    en: {
+      title: 'Shopping Cart', empty: 'Your cart is empty', clear: 'Clear cart', notes: 'Order notes',
+      add: 'Add to cart', update: 'Update cart', added: 'Added to cart', updated: 'Cart updated', view: 'View cart', remove: 'Remove',
+      total: 'Total', submit: 'Send order via WhatsApp', unavailable: 'WhatsApp ordering is not available right now.', close: 'Close',
+      confirmTotal: 'The final total will be confirmed via WhatsApp.', decrease: 'Decrease quantity', increase: 'Increase quantity', cart: 'Open shopping cart'
+    }
+  };
+
+  let cart = { items: [], note: '' };
+  let cartOpener = null;
+  const cartStorageKey = `linky_cart_v1_${clean(page.id || page.slug || window.location.pathname).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+  function cartWhatsappLink() {
+    return links.find(link => link.type === 'whatsapp' && publicLinkUrl(link));
+  }
+
+  function safeLoadCart() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(cartStorageKey) || '{}');
+      return { items: Array.isArray(parsed.items) ? parsed.items : [], note: typeof parsed.note === 'string' ? parsed.note : '' };
+    } catch (error) {
+      return { items: [], note: '' };
+    }
+  }
+
+  function safeSaveCart() {
+    try { localStorage.setItem(cartStorageKey, JSON.stringify(cart)); } catch (error) {}
+  }
+
+  function cleanCart() {
+    const available = new Set(allItems().map(item => String(item.id)));
+    const merged = new Map();
+    cart.items.forEach(entry => {
+      const id = String(entry?.id ?? '');
+      const quantity = Number(entry?.quantity);
+      if (!available.has(id) || !Number.isInteger(quantity) || quantity < 1) return;
+      merged.set(id, Math.min(99, (merged.get(id) || 0) + quantity));
+    });
+    cart.items = [...merged].map(([id, quantity]) => ({ id, quantity }));
+    cart.note = typeof cart.note === 'string' ? cart.note.slice(0, 1000) : '';
+    if (!cart.items.length) cart.note = '';
+    safeSaveCart();
+  }
+
+  function effectivePrice(item) {
+    const details = localizedPriceDetails(item?.price, lang);
+    return details.discount || details.base || '';
+  }
+
+  function parseCartPrice(text) {
+    const normalized = clean(text).replace(/[٠-٩۰-۹]/g, digit => {
+      const arabic = '٠١٢٣٤٥٦٧٨٩'.indexOf(digit);
+      return String(arabic >= 0 ? arabic : '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit));
+    });
+    const match = normalized.match(/\d+(?:[\s\u00a0,،٬.٫]\d+)*/u);
+    if (!match) return null;
+    let numeric = match[0].replace(/[\s\u00a0]/gu, '').replace(/[،٬]/gu, ',').replace(/٫/gu, '.');
+    const comma = numeric.lastIndexOf(',');
+    const dot = numeric.lastIndexOf('.');
+    if (comma >= 0 && dot >= 0) {
+      const decimal = comma > dot ? ',' : '.';
+      numeric = numeric.replaceAll(decimal === ',' ? '.' : ',', '').replace(decimal, '.');
+    } else {
+      const separator = comma >= 0 ? ',' : dot >= 0 ? '.' : '';
+      if (separator) {
+        const parts = numeric.split(separator);
+        numeric = parts.length === 2 && parts[1].length <= 2 ? `${parts[0]}.${parts[1]}` : parts.join('');
+      }
+    }
+    const amount = Number(numeric);
+    if (!Number.isFinite(amount)) return null;
+    const label = `${normalized.slice(0, match.index)}${normalized.slice((match.index || 0) + match[0].length)}`.trim();
+    return { amount, label, normalizedLabel: label.toLowerCase().replace(/[\s.,،٬٫\-_/\\()[\]{}]+/gu, '') };
+  }
+
+  function formattedAmount(amount, label) {
+    const number = new Intl.NumberFormat(lang === 'ar' ? 'ar' : 'en', { maximumFractionDigits: 2 }).format(amount);
+    return label ? `${number} ${label}` : number;
+  }
+
+  function cartRows() {
+    return cart.items.map(entry => {
+      const item = itemById(entry.id);
+      if (!item) return null;
+      const price = effectivePrice(item);
+      const parsed = parseCartPrice(price);
+      return { entry, item, price, parsed, subtotal: parsed ? parsed.amount * entry.quantity : null };
+    }).filter(Boolean);
+  }
+
+  function cartTotal(rows) {
+    if (!rows.length || rows.some(row => !row.parsed)) return null;
+    const label = rows[0].parsed.normalizedLabel;
+    if (rows.some(row => row.parsed.normalizedLabel !== label)) return null;
+    return { amount: rows.reduce((sum, row) => sum + row.subtotal, 0), label: rows[0].parsed.label };
+  }
+
+  function renderItemCartActions() {
+    const enabled = Boolean(cartWhatsappLink());
+    const control = $('#itemQuantityControl');
+    const add = $('#itemAddToCart');
+    const unavailable = $('#itemCartUnavailable');
+    if (control) control.hidden = !enabled;
+    if (add) {
+      add.hidden = !enabled;
+      const exists = activeModalItem && cart.items.some(entry => String(entry.id) === String(activeModalItem.id));
+      add.textContent = exists ? CART_TEXT[lang].update : CART_TEXT[lang].add;
+    }
+    if (unavailable) {
+      unavailable.hidden = enabled;
+      unavailable.textContent = CART_TEXT[lang].unavailable;
+    }
+    setText('#itemQuantity', itemQuantity);
+    $('#itemQtyMinus')?.setAttribute('aria-label', CART_TEXT[lang].decrease);
+    $('#itemQtyPlus')?.setAttribute('aria-label', CART_TEXT[lang].increase);
+  }
+
+  function renderCart() {
+    cleanCart();
+    const enabled = Boolean(cartWhatsappLink());
+    const trigger = $('#cartTrigger');
+    if (trigger) {
+      trigger.hidden = !enabled;
+      trigger.setAttribute('aria-label', CART_TEXT[lang].cart);
+    }
+    const count = cart.items.reduce((sum, entry) => sum + entry.quantity, 0);
+    const badge = $('#cartCount');
+    if (badge) {
+      badge.textContent = count;
+      badge.hidden = count === 0;
+    }
+    setText('#cartTitle', CART_TEXT[lang].title);
+    setText('#cartEmpty', CART_TEXT[lang].empty);
+    setText('#cartClear', CART_TEXT[lang].clear);
+    setText('#cartNoteLabel', CART_TEXT[lang].notes);
+    setText('#cartSubmit', CART_TEXT[lang].submit);
+    $('#cartClose')?.setAttribute('aria-label', CART_TEXT[lang].close);
+    const note = $('#cartNote');
+    if (note && note.value !== cart.note) note.value = cart.note;
+    const rows = cartRows();
+    if ($('#cartEmpty')) $('#cartEmpty').hidden = rows.length > 0;
+    if ($('#cartClear')) $('#cartClear').hidden = rows.length === 0;
+    if ($('#cartItems')) $('#cartItems').innerHTML = rows.map(row => {
+      const title = getTranslated(row.item, 'title');
+      const image = itemImage(row.item) || '/images/defaults/item.svg';
+      const subtotal = row.subtotal === null ? '' : `<small>${escapeHtml(formattedAmount(row.subtotal, row.parsed.label))}</small>`;
+      return `<article class="cart-row" data-cart-id="${escapeAttr(row.entry.id)}"><img src="${escapeAttr(image)}" alt="" onerror="this.src='/images/defaults/item.svg'"><div class="cart-row-main"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(row.price || localizedPrice(row.item.price, true))}</span>${subtotal}<div class="cart-row-actions"><div class="cart-quantity"><button type="button" data-cart-minus aria-label="${escapeAttr(CART_TEXT[lang].decrease)}">−</button><span>${row.entry.quantity}</span><button type="button" data-cart-plus aria-label="${escapeAttr(CART_TEXT[lang].increase)}">+</button></div><button type="button" class="cart-remove" data-cart-remove>${escapeHtml(CART_TEXT[lang].remove)}</button></div></div></article>`;
+    }).join('');
+    const total = cartTotal(rows);
+    if ($('#cartSummary')) $('#cartSummary').textContent = !rows.length
+      ? ''
+      : total
+        ? `${CART_TEXT[lang].total}: ${formattedAmount(total.amount, total.label)}`
+        : CART_TEXT[lang].confirmTotal;
+    if ($('#cartSubmit')) $('#cartSubmit').disabled = !enabled || rows.length === 0;
+  }
+
+  function changeCartQuantity(id, delta) {
+    const entry = cart.items.find(item => String(item.id) === String(id));
+    if (!entry) return;
+    const next = entry.quantity + delta;
+    if (next < 1) cart.items = cart.items.filter(item => String(item.id) !== String(id));
+    else entry.quantity = Math.min(99, next);
+    if (!cart.items.length) cart.note = '';
+    safeSaveCart();
+    renderCart();
+  }
+
+  function addActiveItemToCart() {
+    if (!activeModalItem || !cartWhatsappLink()) return;
+    const id = String(activeModalItem.id);
+    const existing = cart.items.find(entry => String(entry.id) === id);
+    const isUpdate = Boolean(existing);
+    if (existing) existing.quantity = Math.min(99, Math.max(1, itemQuantity));
+    else cart.items.push({ id, quantity: itemQuantity });
+    safeSaveCart();
+    renderCart();
+    renderItemCartActions();
+    setText('#itemCartFeedbackText', isUpdate ? CART_TEXT[lang].updated : CART_TEXT[lang].added);
+    setText('#itemViewCart', CART_TEXT[lang].view);
+    if ($('#itemCartFeedback')) $('#itemCartFeedback').hidden = false;
+  }
+
+  function openCart(event) {
+    if (!cartWhatsappLink()) return;
+    cartOpener = event?.currentTarget?.id === 'itemViewCart'
+      ? $('#cartTrigger')
+      : event?.currentTarget || document.activeElement;
+    const drawer = $('#cartDrawer');
+    if (!drawer) return;
+    drawer.hidden = false;
+    drawer.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => drawer.classList.add('open'));
+    document.body.style.overflow = 'hidden';
+    renderCart();
+    $('#cartClose')?.focus();
+  }
+
+  function closeCart() {
+    const drawer = $('#cartDrawer');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    setTimeout(() => { if (!drawer.classList.contains('open')) drawer.hidden = true; }, 200);
+    if (itemModal?.hidden !== false) document.body.style.overflow = '';
+    cartOpener?.focus?.();
+  }
+
+  function cartMessage() {
+    const rows = cartRows();
+    const total = cartTotal(rows);
+    const lines = rows.map((row, index) => {
+      const subtotal = row.subtotal === null ? '' : ` — ${formattedAmount(row.subtotal, row.parsed.label)}`;
+      return `${index + 1}. ${getTranslated(row.item, 'title')} × ${row.entry.quantity} — ${row.price || localizedPrice(row.item.price, true)}${subtotal}`;
+    });
+    const note = cart.note.trim();
+    if (lang === 'ar') return [`مرحبًا، أود طلب المنتجات التالية من ${pageTitle()}:`, '', ...lines, ...(note ? ['', 'ملاحظات:', note] : []), '', total ? `المجموع: ${formattedAmount(total.amount, total.label)}` : CART_TEXT.ar.confirmTotal, '', 'يرجى تأكيد الطلب والسعر النهائي، شكرًا.'].join('\n');
+    return [`Hello, I would like to order the following items from ${pageTitle()}:`, '', ...lines, ...(note ? ['', 'Notes:', note] : []), '', total ? `Total: ${formattedAmount(total.amount, total.label)}` : CART_TEXT.en.confirmTotal, '', 'Please confirm the order and final total. Thank you.'].join('\n');
+  }
+
+  function initCart() {
+    cart = safeLoadCart();
+    cleanCart();
+    renderCart();
+    $('#cartTrigger')?.addEventListener('click', openCart);
+    $('#cartClose')?.addEventListener('click', closeCart);
+    $('#cartOverlay')?.addEventListener('click', closeCart);
+    $('#itemQtyMinus')?.addEventListener('click', () => { itemQuantity = Math.max(1, itemQuantity - 1); renderItemCartActions(); });
+    $('#itemQtyPlus')?.addEventListener('click', () => { itemQuantity = Math.min(99, itemQuantity + 1); renderItemCartActions(); });
+    $('#itemAddToCart')?.addEventListener('click', addActiveItemToCart);
+    $('#itemViewCart')?.addEventListener('click', event => { closeItemModal(); openCart(event); });
+    $('#cartClear')?.addEventListener('click', () => { cart = { items: [], note: '' }; safeSaveCart(); renderCart(); });
+    $('#cartNote')?.addEventListener('input', event => { cart.note = event.target.value.slice(0, 1000); safeSaveCart(); });
+    $('#cartItems')?.addEventListener('click', event => {
+      const row = event.target.closest('[data-cart-id]');
+      if (!row) return;
+      if (event.target.closest('[data-cart-minus]')) changeCartQuantity(row.dataset.cartId, -1);
+      if (event.target.closest('[data-cart-plus]')) changeCartQuantity(row.dataset.cartId, 1);
+      if (event.target.closest('[data-cart-remove]')) { cart.items = cart.items.filter(item => String(item.id) !== row.dataset.cartId); if (!cart.items.length) cart.note = ''; safeSaveCart(); renderCart(); }
+    });
+    $('#cartSubmit')?.addEventListener('click', () => {
+      const whatsapp = cartWhatsappLink();
+      if (!whatsapp || !cart.items.length) return;
+      cart.items.forEach(entry => trackItemOrderClick(entry.id));
+      window.open(buildWhatsAppUrl(publicLinkUrl(whatsapp), cartMessage()), '_blank', 'noopener');
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && $('#cartDrawer')?.classList.contains('open')) closeCart();
+    });
+  }
+
   function renderAll() {
     syncLanguage();
     renderBrand();
@@ -822,6 +1071,7 @@
     lang = lang === 'ar' ? 'en' : 'ar';
     localStorage.setItem('linky_rest3_lang', lang);
     renderAll();
+    renderCart();
     if (activeModalItem && itemModal && !itemModal.hidden) renderItemModal();
   });
 
@@ -858,17 +1108,11 @@
 
   $('#itemModalClose')?.addEventListener('click', closeItemModal);
   $('#itemModalBackdrop')?.addEventListener('click', closeItemModal);
-  $('#itemModalOrder')?.addEventListener('click', (event) => {
-    const button = event.currentTarget;
-    const target = button.dataset.target;
-    if (!target || !button.dataset.itemId) return;
-    trackItemOrderClick(button.dataset.itemId);
-    window.open(target, '_blank', 'noopener');
-  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && itemModal && !itemModal.hidden) closeItemModal();
   });
 
   applyTheme(theme);
+  initCart();
   renderAll();
 })();

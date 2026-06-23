@@ -216,6 +216,7 @@ button {
 }
 
 .icon-button {
+  position: relative;
   display: grid;
   place-items: center;
   width: 38px;
@@ -228,6 +229,22 @@ button {
     background-color 260ms ease,
     color 260ms ease,
     transform 260ms ease;
+}
+
+.cart-count {
+  position: absolute;
+  inset-block-start: -7px;
+  inset-inline-end: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
 }
 
 .icon-button:hover,
@@ -868,6 +885,60 @@ html[dir="ltr"] .hero-content {
 .item-modal-order {
   margin-top: auto;
 }
+.item-cart-actions { display: grid; gap: 12px; margin-top: auto; }
+.cart-quantity {
+  display: inline-grid;
+  grid-template-columns: 38px 44px 38px;
+  align-items: center;
+  justify-self: start;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.cart-quantity button { height: 100%; border: 0; background: transparent; color: var(--primary-hover); font-size: 1.15rem; cursor: pointer; }
+.cart-quantity span { text-align: center; font-weight: 900; }
+.cart-add-feedback { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 0.86rem; }
+.cart-add-feedback button, .cart-clear, .cart-remove { border: 0; background: transparent; color: var(--primary-hover); font-weight: 800; cursor: pointer; }
+
+.cart-drawer { position: fixed; inset: 0; z-index: 1600; }
+.cart-drawer[hidden] { display: none !important; }
+.cart-overlay { position: absolute; inset: 0; background: rgb(0 0 0 / 0.58); opacity: 0; transition: opacity 180ms ease; }
+.cart-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-strong);
+  transform: translateX(105%);
+  transition: transform 200ms ease;
+}
+[dir="rtl"] .cart-panel { transform: translateX(-105%); }
+.cart-drawer.open .cart-overlay { opacity: 1; }
+.cart-drawer.open .cart-panel { transform: translateX(0); }
+.cart-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--line); }
+.cart-header h2 { margin: 0; font-size: 1.35rem; }
+.cart-close { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--primary-soft); color: var(--ink); font-size: 1.4rem; cursor: pointer; }
+.cart-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; }
+.cart-empty { padding: 44px 0; color: var(--muted); text-align: center; }
+.cart-row { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.cart-row > img { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; background: var(--primary-soft); }
+.cart-row-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cart-row-main > span, .cart-row-main > small { color: var(--muted); font-size: 0.82rem; }
+.cart-row-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 7px; }
+.cart-row .cart-quantity { grid-template-columns: 30px 32px 30px; min-height: 32px; }
+.cart-clear { margin: 16px 0; }
+.cart-note-label { display: block; margin-bottom: 7px; font-weight: 800; }
+.cart-note { width: 100%; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--page); color: inherit; font: inherit; }
+.cart-footer { padding: 18px 20px; border-top: 1px solid var(--line); }
+.cart-summary { margin-bottom: 12px; font-weight: 900; }
+.cart-submit { width: 100%; min-height: 46px; border: 0; border-radius: 999px; background: var(--primary-color); color: #fff; font-weight: 900; cursor: pointer; }
+.cart-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .item-modal-unavailable {
   border-radius: 14px;
@@ -1211,4 +1282,8 @@ html[dir="ltr"] .hero-content {
     min-height: 220px;
     height: 240px;
   }
+
+  .cart-panel { width: 100%; }
+  .cart-row { grid-template-columns: 60px 1fr; }
+  .cart-row > img { width: 60px; height: 60px; }
 }

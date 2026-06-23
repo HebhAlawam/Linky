@@ -74,11 +74,13 @@
 
       <div class="nav-actions">
         <button class="btn-order" onclick="scrollToSection('menu')" data-i18n="nav.order">اطلب الآن</button>
+        <button class="cart-trigger" id="cartTrigger" type="button" hidden><i class="ti ti-shopping-cart" aria-hidden="true"></i><span class="cart-count" id="cartCount" hidden></span></button>
         <button class="btn-share" type="button" onclick="shareSite()" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
         <button class="btn-lang" id="langToggle" onclick="toggleLang()" data-i18n="nav.langToggle">English</button>
       </div>
 
       <div class="nav-mobile-right">
+        <button class="cart-trigger" id="cartTriggerMobile" type="button" hidden><i class="ti ti-shopping-cart" aria-hidden="true"></i><span class="cart-count" id="cartCountMobile" hidden></span></button>
         <button class="btn-share" type="button" onclick="shareSite()" aria-label="Share site"><i class="ti ti-share-2" aria-hidden="true"></i></button>
         <button class="btn-lang" id="langToggleMobile" onclick="toggleLang()" data-i18n="nav.langToggle">English</button>
         <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -117,7 +119,17 @@
         <div class="dish-info"><h2 id="dishName"></h2><div class="dish-divider"></div><p id="dishDesc"></p></div>
         <div class="dish-order-panel">
           <div class="dish-price-block"><span class="dish-price-label" data-i18n="dishDetail.priceLabel">السعر</span><span class="dish-price" id="dishPrice"></span></div>
-          <a class="btn-primary dish-order-btn" id="dishOrderLink" href="#" data-i18n="dishDetail.orderNow">اطلب الآن</a>
+          <div class="cart-quantity" id="itemQuantityControl">
+            <button type="button" id="itemQtyMinus" aria-label="تقليل الكمية">−</button>
+            <span id="itemQuantity">1</span>
+            <button type="button" id="itemQtyPlus" aria-label="زيادة الكمية">+</button>
+          </div>
+          <button class="btn-primary dish-order-btn" id="itemAddToCart" type="button">أضف إلى السلة</button>
+          <div class="cart-add-feedback" id="itemCartFeedback" role="status" aria-live="polite" hidden>
+            <span id="itemCartFeedbackText"></span>
+            <button type="button" id="itemViewCart"></button>
+          </div>
+          <p class="item-modal-unavailable" id="itemCartUnavailable" hidden></p>
           <button class="dish-back-link" onclick="closeDish()" data-i18n="dishDetail.backToMenu">العودة للقائمة</button>
         </div>
       </div>
@@ -161,8 +173,29 @@
     <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">
         <i class="ti ti-chevron-up"></i>
     </button>
- </footer>
+  </footer>
   <div class="linky-signature"><span id="linkyCreditText"></span> <a href="{{ url('/') }}" target="_blank" rel="noopener">Linky</a></div>
+
+  <div class="cart-drawer" id="cartDrawer" aria-hidden="true" hidden>
+    <div class="cart-overlay" id="cartOverlay"></div>
+    <aside class="cart-panel" id="cartPanel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+      <div class="cart-header">
+        <h2 id="cartTitle"></h2>
+        <button type="button" class="cart-close" id="cartClose" aria-label="إغلاق">×</button>
+      </div>
+      <div class="cart-body">
+        <p class="cart-empty" id="cartEmpty"></p>
+        <div class="cart-items" id="cartItems"></div>
+        <button type="button" class="cart-clear" id="cartClear"></button>
+        <label class="cart-note-label" for="cartNote" id="cartNoteLabel"></label>
+        <textarea id="cartNote" class="cart-note" rows="3" maxlength="1000"></textarea>
+      </div>
+      <div class="cart-footer">
+        <div class="cart-summary" id="cartSummary"></div>
+        <button type="button" class="btn-primary cart-submit" id="cartSubmit"></button>
+      </div>
+    </aside>
+  </div>
 
   <script>
     window.APP = { lang: 'ar', data: @json($pageData) };
@@ -170,7 +203,7 @@
       en: {
         nav: { home: 'Home', menu: 'Menu', hours: 'Hours', contact: 'Contact', order: 'Order', langToggle: 'العربية' },
         hero: { viewMenu: 'View Menu', contactUs: 'Contact Us' },
-        menu: { title: 'Menu', order: 'Order', all: 'All' },
+        menu: { title: 'Menu', order: 'View details', all: 'All' },
         hours: { title: 'Opening Hours', subtitle: 'Join us for an unforgettable dining experience.', serviceTimes: 'Service Times', monThu: 'Mon-Thu', friSat: 'Fri-Sat', sunday: 'Sunday', closed: 'Closed', monThuTime: '9AM - 11PM', friSatTime: '9AM - 1AM' },
         contact: { title: 'Reservations & Inquiries', subtitle: 'We invite you to reach out for bookings or special requests.', locationTitle: 'Location', contactTitle: 'Contact', followTitle: 'Follow Us', followSubtitle: 'Follow our latest news and offers.', address: 'Address will be added soon.' },
         footer: { copyright: 'All rights reserved.' },
@@ -179,7 +212,7 @@
       ar: {
         nav: { home: 'الرئيسية', menu: 'القائمة', hours: 'مواعيد العمل', contact: 'تواصل معنا', order: 'اطلب الآن', langToggle: 'English' },
         hero: { viewMenu: 'عرض القائمة', contactUs: 'تواصل معنا' },
-        menu: { title: 'القائمة', order: 'اطلب', all: 'الكل' },
+        menu: { title: 'القائمة', order: 'عرض التفاصيل', all: 'الكل' },
         hours: { title: 'مواعيد العمل', subtitle: 'يسعدنا استقبالكم لتجربة مميزة.', serviceTimes: 'أوقات الخدمة', monThu: 'الإثنين - الخميس', friSat: 'الجمعة - السبت', sunday: 'الأحد', closed: 'مغلق', monThuTime: '9ص - 11م', friSatTime: '9ص - 1ص' },
         contact: { title: 'الحجوزات والاستفسارات', subtitle: 'نرحب بتواصلكم للحجز أو الاستفسار.', locationTitle: 'الموقع', contactTitle: 'تواصل', followTitle: 'تابعنا', followSubtitle: 'تابع أحدث أخبارنا وعروضنا.', address: 'سيتم إضافة العنوان قريباً.' },
         footer: { copyright: 'جميع الحقوق محفوظة.' },

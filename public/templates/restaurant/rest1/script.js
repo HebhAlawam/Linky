@@ -300,7 +300,7 @@ function renderLinks() {
   const contactLinks = document.getElementById('contactLinks');
   const socialLinks = document.getElementById('socialLinks');
   const links = validLinks();
-  const contactTypes = ['phone', 'whatsapp', 'email', 'map', 'website', 'custom'];
+  const contactTypes = ['phone', 'whatsapp', 'email', 'website', 'custom'];
   const contactItems = links.filter(link => contactTypes.includes(link.type));
   const socialItems = links.filter(link => link.type === 'social');
 
@@ -309,7 +309,7 @@ function renderLinks() {
       .map(link => {
         const icon = iconHtml(link);
         const title = escapeHtml(linkTitle(link));
-        return `<a href="${escapeAttr(link.url)}" target="_blank" rel="noopener" onclick="trackLinkClick('${escapeAttr(link.id)}')">${icon}<span>${title}</span></a>`;
+        return `<a href="${escapeAttr(publicLinkUrl(link))}" target="_blank" rel="noopener" onclick="trackLinkClick('${escapeAttr(link.id)}')">${icon}<span>${title}</span></a>`;
       })
       .join('');
   }
@@ -325,6 +325,21 @@ function renderLinks() {
 
 function validLinks() {
   return (data.links || []).filter(link => String(link?.url || '').trim() !== '');
+}
+
+function publicLinkUrl(link) {
+  const raw = String(link?.url || '').trim();
+  if (!raw) return '';
+  if (link.type === 'phone') {
+    const phone = normalizePhone(raw);
+    return raw.startsWith('tel:') ? raw : (phone ? `tel:${phone}` : raw);
+  }
+  if (link.type === 'whatsapp') {
+    if (/wa\.me|api\.whatsapp\.com/i.test(raw)) return raw;
+    const phone = normalizePhone(raw);
+    return phone ? `https://wa.me/${phone}` : raw;
+  }
+  return raw;
 }
 
 function linkTitle(link) {
@@ -352,6 +367,14 @@ function currentAddress() {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function mapLink() {
+  return validLinks().find(link => link.type === 'map' && publicLinkUrl(link));
+}
+
+function mapLinkLabel() {
+  return lang === 'ar' ? 'الموقع على الخريطة' : 'View on map';
+}
+
 function setCardVisible(childId, visible) {
   const child = document.getElementById(childId);
   const card = child?.closest('.contact-card');
@@ -360,13 +383,18 @@ function setCardVisible(childId, visible) {
 
 function updateContactSection(contactItems, socialItems) {
   const address = currentAddress();
+  const map = mapLink();
   const hasAddress = address !== '';
+  const hasLocation = hasAddress || Boolean(map);
   const hasContactLinks = contactItems.length > 0;
   const hasSocialLinks = socialItems.length > 0;
   const contactLinks = document.getElementById('contactLinks');
 
-  setText('contactAddress', address);
-  setCardVisible('contactAddress', hasAddress);
+  const addressElement = document.getElementById('contactAddress');
+  if (addressElement) {
+    addressElement.innerHTML = `${hasAddress ? `<span class="contact-address-text">${escapeHtml(address)}</span>` : ''}${map ? `<a class="contact-map-link" href="${escapeAttr(publicLinkUrl(map))}" target="_blank" rel="noopener noreferrer" onclick="trackLinkClick('${escapeAttr(map.id)}')">${iconHtml(map, 'ti ti-map-pin')}<span>${escapeHtml(mapLinkLabel())}</span></a>` : ''}`;
+  }
+  setCardVisible('contactAddress', hasLocation);
   setCardVisible('contactLinks', true);
   setCardVisible('socialLinks', hasSocialLinks);
 
@@ -687,6 +715,7 @@ const cartStorageKey = `linky_cart_v1_${String(data.page?.id || data.page?.slug 
 
 function cartWhatsappLink() {
   return (data.links || []).find(link => link.type === 'whatsapp'
+    && link.is_primary === true
     && buildWhatsAppUrl(link.url, '') !== '#');
 }
 

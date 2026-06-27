@@ -4,20 +4,21 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Link;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class LinkController extends Controller
 {
     private const FIXED_TYPES = [
-        'whatsapp',
-        'phone',
+        'whatsapp_orders',
         'email',
         'map',
         'website',
     ];
 
     private const FORM_TYPES = [
+        'whatsapp_orders' => 'واتساب الطلبات',
         'whatsapp' => 'واتساب',
         'phone' => 'هاتف',
         'email' => 'بريد إلكتروني',
@@ -81,7 +82,7 @@ class LinkController extends Controller
             'type' => $type,
             'label' => self::FORM_TYPES[$type],
             'icon' => $this->iconFor($type),
-            'link' => $links->first(fn (Link $link) => $link->type === $type),
+            'link' => $links->first(fn (Link $link) => $this->formTypeFromLink($link) === $type),
         ]);
         $socialSlots = collect(self::SOCIAL_TYPES)->map(fn ($type) => [
             'type' => $type,
@@ -89,9 +90,12 @@ class LinkController extends Controller
             'icon' => $this->iconFor($type),
             'link' => $links->first(fn (Link $link) => $this->formTypeFromLink($link) === $type),
         ]);
+        $contactNumberLinks = $links
+            ->filter(fn (Link $link) => in_array($this->formTypeFromLink($link), ['phone', 'whatsapp'], true))
+            ->values();
         $customLinks = $links->filter(fn (Link $link) => $this->formTypeFromLink($link) === 'custom')->values();
 
-        return view('dashboard.links.index', compact('fixedSlots', 'socialSlots', 'customLinks', 'typeLabels'));
+        return view('dashboard.links.index', compact('fixedSlots', 'socialSlots', 'contactNumberLinks', 'customLinks', 'typeLabels'));
     }
 
     public function create(Request $request)
@@ -102,10 +106,13 @@ class LinkController extends Controller
             return $this->missingPageRedirect();
         }
 
-        $types = self::FORM_TYPES;
+        $types = $request->query('context') === 'contact-number'
+            ? collect(self::FORM_TYPES)->only(['phone', 'whatsapp'])->all()
+            : self::FORM_TYPES;
         $disabledTypes = $this->unavailableTypes($page);
+        $formContext = $request->query('context');
 
-        return view('dashboard.links.create', compact('types', 'disabledTypes'));
+        return view('dashboard.links.create', compact('types', 'disabledTypes', 'formContext'));
     }
 
     public function store(Request $request)
@@ -130,15 +137,22 @@ class LinkController extends Controller
             $data['display_order'] = ((int) Link::query()->where('page_id', $page->id)->max('display_order')) + 1;
         }
 
-        Link::query()->create([
-            'page_id' => $page->id,
-            'title' => $this->titlePayloadForStorage($data),
-            'url' => $this->normalizeUrl($formType, $data['url']),
-            'type' => $this->databaseType($formType),
-            'icon' => $this->iconFor($formType),
-            'display_order' => $data['display_order'],
-            'clicks' => 0,
-        ]);
+        DB::transaction(function () use ($page, $data, $formType) {
+            if ($this->isPrimaryWhatsappFormType($formType)) {
+                $this->clearPrimaryWhatsapp($page->id);
+            }
+
+            Link::query()->create([
+                'page_id' => $page->id,
+                'title' => $this->titlePayloadForStorage($data),
+                'url' => $this->normalizeUrl($formType, $data['url']),
+                'type' => $this->databaseType($formType),
+                'icon' => $this->iconFor($formType),
+                'display_order' => $data['display_order'],
+                'clicks' => 0,
+                'is_primary' => $this->isPrimaryWhatsappFormType($formType),
+            ]);
+        });
 
         return redirect()
             ->route('dashboard.links.index')
@@ -156,10 +170,13 @@ class LinkController extends Controller
         abort_unless((int) $link->page_id === (int) $page->id, 404);
 
         $selectedType = $this->formTypeFromLink($link);
-        $types = self::FORM_TYPES;
+        $types = in_array($selectedType, ['phone', 'whatsapp'], true)
+            ? collect(self::FORM_TYPES)->only(['phone', 'whatsapp'])->all()
+            : self::FORM_TYPES;
         $disabledTypes = $this->unavailableTypes($page, $link);
+        $formContext = in_array($selectedType, ['phone', 'whatsapp'], true) ? 'contact-number' : null;
 
-        return view('dashboard.links.edit', compact('link', 'types', 'selectedType', 'disabledTypes'));
+        return view('dashboard.links.edit', compact('link', 'types', 'selectedType', 'disabledTypes', 'formContext'));
     }
 
     public function update(Request $request, Link $link)
@@ -193,7 +210,14 @@ class LinkController extends Controller
             $linkData['display_order'] = $data['display_order'];
         }
 
-        $link->update($linkData);
+        DB::transaction(function () use ($page, $link, $linkData, $formType) {
+            if ($this->isPrimaryWhatsappFormType($formType)) {
+                $this->clearPrimaryWhatsapp($page->id);
+            }
+
+            $linkData['is_primary'] = $this->isPrimaryWhatsappFormType($formType);
+            $link->update($linkData);
+        });
 
         return redirect()
             ->route('dashboard.links.index')
@@ -241,6 +265,13 @@ class LinkController extends Controller
 
     private function validateLink(Request $request): array
     {
+        if ($request->input('type') === 'whatsapp_orders') {
+            $request->merge([
+                'title_ar' => $request->input('title_ar') ?: 'واتساب',
+                'title_en' => $request->input('title_en') ?: null,
+            ]);
+        }
+
         return $request->validate([
             'type' => ['required', Rule::in(array_keys(self::FORM_TYPES))],
             'title_ar' => ['required', 'string', 'max:100'],
@@ -278,11 +309,19 @@ class LinkController extends Controller
 
     private function databaseType(string $type): string
     {
+        if ($this->isPrimaryWhatsappFormType($type)) {
+            return 'whatsapp';
+        }
+
         return in_array($type, self::SOCIAL_TYPES, true) ? 'social' : $type;
     }
 
     private function iconFor(string $type): string
     {
+        if ($this->isPrimaryWhatsappFormType($type)) {
+            return self::ICONS['whatsapp'];
+        }
+
         return self::ICONS[$type] ?? self::ICONS['custom'];
     }
 
@@ -305,6 +344,10 @@ class LinkController extends Controller
             'ti ti-brand-linkedin' => 'linkedin',
         ];
 
+        if ($link->type === 'whatsapp') {
+            return $link->is_primary ? 'whatsapp_orders' : 'whatsapp';
+        }
+
         if ($link->type === 'social' && $link->icon && isset($iconMap[$link->icon])) {
             return $iconMap[$link->icon];
         }
@@ -319,7 +362,7 @@ class LinkController extends Controller
             ->when($except, fn ($query) => $query->whereKeyNot($except->id))
             ->get()
             ->map(fn (Link $link) => $this->formTypeFromLink($link))
-            ->filter(fn (string $type) => $type !== 'custom')
+            ->filter(fn (string $type) => ! in_array($type, ['custom', 'phone', 'whatsapp'], true))
             ->unique()
             ->values()
             ->all();
@@ -327,7 +370,7 @@ class LinkController extends Controller
 
     private function duplicateMessage(int $pageId, string $formType, ?Link $except = null): ?string
     {
-        if ($formType === 'custom') {
+        if (in_array($formType, ['custom', 'phone', 'whatsapp', 'whatsapp_orders'], true)) {
             return null;
         }
 
@@ -351,11 +394,25 @@ class LinkController extends Controller
         $url = trim($url);
 
         return match ($type) {
+            'whatsapp_orders' => $this->normalizeWhatsapp($url),
             'whatsapp' => $this->normalizeWhatsapp($url),
             'phone' => $this->normalizePhone($url),
             'email' => $this->normalizeEmail($url),
             default => $this->normalizeWebUrl($url),
         };
+    }
+
+    private function isPrimaryWhatsappFormType(string $type): bool
+    {
+        return $type === 'whatsapp_orders';
+    }
+
+    private function clearPrimaryWhatsapp(int $pageId): void
+    {
+        Link::query()
+            ->where('page_id', $pageId)
+            ->where('type', 'whatsapp')
+            ->update(['is_primary' => false]);
     }
 
     private function normalizeWhatsapp(string $url): string

@@ -19,6 +19,7 @@
       orderUnavailable: 'لا توجد وسيلة طلب متاحة حاليًا.',
       callUs: 'اتصل بنا',
       address: 'الموقع',
+      viewMap: 'الموقع على الخريطة',
       hours: 'مواعيد العمل',
       contact: 'التواصل',
       noCategories: 'لا توجد تصنيفات بعد.',
@@ -44,6 +45,7 @@
       orderUnavailable: 'Ordering is not available right now.',
       callUs: 'Call Us',
       address: 'Address',
+      viewMap: 'View on map',
       hours: 'Working Hours',
       contact: 'Contact',
       noCategories: 'No categories yet.',
@@ -59,7 +61,7 @@
     }
   };
 
-  const contactTypes = ['phone', 'whatsapp', 'email', 'map', 'website', 'custom'];
+  const contactTypes = ['phone', 'whatsapp', 'email', 'website', 'custom'];
   let lang = localStorage.getItem('linky_rest3_lang') || app.lang || 'ar';
   let theme = localStorage.getItem('linky_rest3_theme') || 'light';
   let currentSlide = 0;
@@ -574,8 +576,9 @@
     const socialLinks = links.filter((link) => link.type === 'social' && publicLinkUrl(link));
     const address = getTranslated(settings.address, null, '');
     const hours = getTranslated(settings.hours, null, '');
+    const map = mapLink();
 
-    if (address) rows.push(contactRow(fallbackIconHtml('location'), T[lang].address, address));
+    if (address || map) rows.push(contactRow(fallbackIconHtml('location'), T[lang].address, address, map));
     if (hours) rows.push(contactRow(fallbackIconHtml('clock'), T[lang].hours, hours));
     contactLinks.forEach((link) => {
       rows.push(contactLinkRow(link));
@@ -609,9 +612,13 @@
       </div>`;
   }
 
+  function mapLink() {
+    return links.find((link) => link.type === 'map' && publicLinkUrl(link));
+  }
+
   function contactRow(iconHtml, label, value, link = null) {
     const content = link
-      ? `<a href="${escapeAttr(publicLinkUrl(link))}" target="_blank" rel="noreferrer" data-track-link="${escapeAttr(link.id)}">${escapeHtml(label)}</a>${value ? `<small>${escapeHtml(value)}</small>` : ''}`
+      ? `${value ? `<span class="contact-value-line">${escapeHtml(value)}</span>` : ''}<a href="${escapeAttr(publicLinkUrl(link))}" target="_blank" rel="noopener noreferrer" data-track-link="${escapeAttr(link.id)}" class="map-action">${linkIconHtml(link)}<span>${escapeHtml(T[lang].viewMap)}</span></a>`
       : escapeHtml(value);
 
     return `
@@ -623,13 +630,13 @@
   }
 
   function contactLinkLabel(link) {
-    if (link.type === 'phone') return lang === 'ar' ? 'الهاتف' : 'Phone';
+    if (['phone', 'whatsapp'].includes(link.type)) return linkTitle(link);
     return T[lang].linkFallback[link.type] || T[lang].linkFallback.custom;
   }
 
   function contactLinkText(link) {
     if (link.type === 'phone') return displayPhone(link) || contactLinkLabel(link);
-    if (link.type === 'whatsapp') return linkTitle(link) || T[lang].linkFallback.whatsapp;
+    if (link.type === 'whatsapp') return displayPhone(link) || contactLinkLabel(link);
     return linkTitle(link);
   }
 
@@ -729,7 +736,22 @@
   }
 
   function displayPhone(link) {
-    return clean(link?.url).replace(/^tel:/i, '');
+    const raw = clean(link?.url);
+    if (link?.type === 'whatsapp') {
+      try {
+        const url = new URL(raw, window.location.origin);
+        const pathPhone = url.hostname.includes('wa.me')
+          ? url.pathname.replace(/^\/+/, '').split('/')[0]
+          : url.searchParams.get('phone');
+        const phone = normalizePhone(pathPhone || raw);
+        return phone || raw;
+      } catch (error) {
+        const phone = normalizePhone(raw);
+        return phone || raw;
+      }
+    }
+
+    return raw.replace(/^tel:/i, '');
   }
 
   function buildWhatsAppUrl(value, message) {
@@ -804,7 +826,7 @@
   const cartStorageKey = `linky_cart_v1_${clean(page.id || page.slug || window.location.pathname).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
   function cartWhatsappLink() {
-    return links.find(link => link.type === 'whatsapp' && publicLinkUrl(link));
+    return links.find(link => link.type === 'whatsapp' && link.is_primary === true && publicLinkUrl(link));
   }
 
   function safeLoadCart() {

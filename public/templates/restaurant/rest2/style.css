@@ -89,7 +89,7 @@ html:not(.dark) .hero-fallback #heroSlogan {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -99,25 +99,56 @@ html:not(.dark) .hero-fallback #heroSlogan {
 }
 
 .contact-links-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
   max-width: 100%;
 }
 
 html[dir="rtl"] .contact-info-line {
-  margin-left: auto;
   text-align: right;
 }
 
 html[dir="ltr"] .contact-info-line {
-  margin-right: auto;
   text-align: left;
 }
 
 html[dir="rtl"] .contact-links-pills {
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 html[dir="ltr"] .contact-links-pills {
-  justify-content: flex-start;
+  justify-content: center;
+}
+
+.contact-links-pills a {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+#contactInfoCard > div {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  #contactInfoCard > div {
+    padding: 1.1rem 1.25rem;
+  }
+}
+
+#addressText,
+#hoursText {
+  overflow-wrap: anywhere;
+}
+
+.address-text-line {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .linky-signature {
@@ -247,6 +278,9 @@ html.dark .linky-signature {
 .dark .cart-copy-help { color: #9ca3af; }
 .cart-submit { width: 100%; min-height: 46px; border: 0; border-radius: 14px; background: var(--primary); color: #fff; font-weight: 900; cursor: pointer; }
 .cart-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.map-action { display: flex; align-items: center; gap: 0.45rem; width: fit-content; max-width: 100%; margin-top: 0.5rem; margin-inline-end: auto; color: var(--primary); font-weight: 800; text-decoration: none; overflow-wrap: anywhere; }
+.map-action span { min-width: 0; }
+.map-action:hover { text-decoration: underline; }
 @media (max-width: 480px) {
   .cart-panel { width: 100%; }
   .cart-row { grid-template-columns: 60px 1fr; }

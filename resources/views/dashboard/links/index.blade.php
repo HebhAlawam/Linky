@@ -196,6 +196,91 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="card-title">أرقام التواصل</h3>
+            <div class="card-subtitle">أرقام هاتف وواتساب إضافية للتواصل </div>
+        </div>
+        <a href="{{ route('dashboard.links.create', ['context' => 'contact-number', 'type' => 'phone']) }}" class="btn btn-sm btn-primary">
+            <i class="ti ti-plus ms-2"></i>
+            إضافة رقم تواصل
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter">
+                <thead>
+                <tr>
+                    <th>ترتيب</th>
+                    <th>النوع</th>
+                    <th>العنوان الظاهر</th>
+                    <th>الرقم</th>
+                    <th>النقرات</th>
+                    <th>إجراءات</th>
+                </tr>
+                </thead>
+                <tbody class="js-links-tbody">
+                @forelse($contactNumberLinks as $link)
+                    <tr data-id="{{ $link->id }}">
+                        <td class="text-center">
+                            <span class="js-drag-handle cursor-pointer">
+                                <i class="ti ti-grip-vertical"></i>
+                                <span class="small js-order-text">{{ $link->display_order }}</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-lt">
+                                {{ $link->type === 'phone' ? 'هاتف' : 'واتساب' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ $link->title_text }}</div>
+                        </td>
+                        <td>
+                            <a href="{{ $link->url }}" target="_blank" rel="noopener" class="text-reset text-decoration-underline small" dir="ltr">
+                                {{ $displayUrl($link) }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-lt">{{ $link->clicks }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('dashboard.links.edit', $link) }}" class="text-primary">
+                                    <i class="ti ti-edit"></i>
+                                </a>
+                                <button
+                                    type="button"
+                                    class="js-icon-action text-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#confirmDeleteModal"
+                                    data-title="حذف الرقم"
+                                    data-message="هل أنت متأكد من حذف هذا الرقم نهائيًا؟"
+                                    data-name="{{ $link->title_text }}"
+                                    data-meta="#{{ $link->id }}"
+                                    data-action="{{ route('dashboard.links.destroy', $link) }}"
+                                    data-method="DELETE"
+                                    data-btn-text="نعم، احذف"
+                                    data-btn-class="btn-danger">
+                                    <i class="ti ti-x" data-bs-toggle="tooltip" data-bs-title="حذف"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            لا توجد أرقام تواصل إضافية بعد 🌱
+                        </td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div>
@@ -221,7 +306,7 @@
                 </tr>
                 </thead>
 
-                <tbody id="links-tbody">
+                <tbody id="links-tbody" class="js-links-tbody">
                 @forelse($customLinks as $link)
                 <tr data-id="{{ $link->id }}">
                     <td class="text-center">
@@ -293,10 +378,9 @@
 
 @push('scripts')
 <script>
-const tbody = document.getElementById('links-tbody');
 let dragRow = null;
 
-tbody?.querySelectorAll('tr[data-id]').forEach(row => {
+document.querySelectorAll('.js-links-tbody').forEach(tbody => tbody.querySelectorAll('tr[data-id]').forEach(row => {
     row.draggable = true;
 
     row.addEventListener('dragstart', () => {
@@ -342,6 +426,6 @@ tbody?.querySelectorAll('tr[data-id]').forEach(row => {
             body: JSON.stringify({ items })
         });
     });
-});
+}));
 </script>
 @endpush

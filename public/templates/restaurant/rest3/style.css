@@ -958,7 +958,7 @@ html[dir="ltr"] .hero-content {
 .contact-card dl {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
   margin: 0;
 }
 
@@ -967,9 +967,10 @@ html[dir="ltr"] .hero-content {
   grid-template-columns: 24px 1fr;
   grid-template-rows: auto auto;
   gap: 5px 12px;
-  min-height: 116px;
+  min-height: 0;
   align-items: start;
-  padding: 20px;
+  min-width: 0;
+  padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -991,6 +992,8 @@ html[dir="ltr"] .hero-content {
   color: var(--ink);
   font-weight: 800;
   line-height: 1.35;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .contact-row dd {
@@ -1000,11 +1003,43 @@ html[dir="ltr"] .hero-content {
   font-size: 0.92rem;
   line-height: 1.55;
   white-space: pre-line;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .contact-row dd a {
   color: var(--primary-hover);
   font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.contact-value-line {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.contact-row dd .map-action {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.5rem;
+  text-decoration: none;
+}
+
+.contact-row dd .map-action span {
+  min-width: 0;
+}
+
+.contact-row dd .map-action svg {
+  width: 1em;
+  height: 1em;
+}
+
+.contact-row dd .map-action:hover {
+  text-decoration: underline;
 }
 
 .contact-row dd small {

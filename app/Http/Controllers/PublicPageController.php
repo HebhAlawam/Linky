@@ -70,6 +70,7 @@ class PublicPageController extends Controller
                 'url' => $link->url,
                 'icon' => $link->icon,
                 'type' => $link->type,
+                'is_primary' => $link->is_primary,
             ])->values(),
         ];
 

@@ -14,11 +14,13 @@ class Link extends Model
         'type',
         'display_order',
         'clicks',
+        'is_primary',
     ];
 
     protected $casts = [
         'clicks' => 'integer',
         'display_order' => 'integer',
+        'is_primary' => 'boolean',
     ];
 
     public function getTitleTextAttribute(): string

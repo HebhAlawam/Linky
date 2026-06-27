@@ -18,6 +18,7 @@
       linksEmpty: 'سيتم إضافة وسائل التواصل قريبًا.',
       allContactEmpty: 'سيتم إضافة معلومات التواصل قريبًا.',
       openMap: 'فتح الخريطة',
+      viewMap: 'الموقع على الخريطة',
       address: 'العنوان',
       hours: 'مواعيد العمل',
       links: 'تواصل',
@@ -46,6 +47,7 @@
       linksEmpty: 'Contact details will be added soon.',
       allContactEmpty: 'Contact information will be added soon.',
       openMap: 'Open Map',
+      viewMap: 'View on map',
       address: 'Address',
       hours: 'Working Hours',
       links: 'Contact',
@@ -65,7 +67,7 @@
     }
   };
 
-  const contactTypes = ['phone', 'whatsapp', 'email', 'map', 'website', 'custom'];
+  const contactTypes = ['phone', 'whatsapp', 'email', 'website', 'custom'];
   const EMPTY_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
   let lang = localStorage.getItem('linky_rest2_lang') || app.lang || 'ar';
   let activeCategory = 'all';
@@ -387,7 +389,8 @@
   function renderContact() {
     const address = getTranslated(settings.address, null, '');
     const hours = getTranslated(settings.hours, null, '');
-    const contactLinks = links.filter((link) => contactTypes.includes(link.type) && clean(link.url));
+    const map = mapLink();
+    const contactLinks = links.filter((link) => contactTypes.includes(link.type) && publicLinkUrl(link));
     const socialLinks = links.filter((link) => link.type === 'social' && clean(link.url));
 
     setText('contactTitle', T[lang].contact);
@@ -397,7 +400,7 @@
     setText('linksTitle', T[lang].links);
     setText('rightsText', T[lang].rights);
 
-    const hasAnyContactData = contactLinks.length > 0 || Boolean(address) || Boolean(hours);
+    const hasAnyContactData = contactLinks.length > 0 || Boolean(address) || Boolean(hours) || Boolean(map);
 
     toggleCard('contactLinksRow', hasAnyContactData || contactLinks.length === 0);
     const contactWrap = $('contactLinks');
@@ -411,8 +414,11 @@
       linksEmpty.classList.toggle('hidden', contactLinks.length > 0 || !hasAnyContactData);
     }
 
-    toggleCard('addressRow', Boolean(address));
-    setText('addressText', address);
+    toggleCard('addressRow', Boolean(address) || Boolean(map));
+    const addressText = $('addressText');
+    if (addressText) {
+      addressText.innerHTML = `${address ? `<span class="address-text-line">${escapeHtml(address)}</span>` : ''}${map ? `<a href="${escapeAttr(publicLinkUrl(map))}" target="_blank" rel="noopener noreferrer" data-track-link="${escapeAttr(map.id)}" class="map-action"><i class="${escapeAttr(iconClass(map))}"></i><span>${escapeHtml(T[lang].viewMap)}</span></a>` : ''}`;
+    }
 
     toggleCard('hoursRow', Boolean(hours));
     setText('hoursText', hours);
@@ -442,10 +448,29 @@
       : 'bg-gray-50 text-gray-700 hover:border-restaurant hover:text-restaurant border border-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700';
 
     return `
-      <a href="${escapeAttr(link.url)}" target="_blank" rel="noopener" data-track-link="${escapeAttr(link.id)}" class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition whitespace-nowrap ${classes}">
+      <a href="${escapeAttr(publicLinkUrl(link))}" target="_blank" rel="noopener" data-track-link="${escapeAttr(link.id)}" class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition whitespace-nowrap ${classes}">
         <i class="${escapeAttr(iconClass(link))}"></i>
         <span>${escapeHtml(linkTitle(link))}</span>
       </a>`;
+  }
+
+  function mapLink() {
+    return links.find((link) => link.type === 'map' && publicLinkUrl(link));
+  }
+
+  function publicLinkUrl(link) {
+    const raw = clean(link?.url);
+    if (!raw) return '';
+    if (link.type === 'phone') {
+      const phone = normalizePhone(raw);
+      return raw.startsWith('tel:') ? raw : (phone ? `tel:${phone}` : raw);
+    }
+    if (link.type === 'whatsapp') {
+      if (/wa\.me|api\.whatsapp\.com/i.test(raw)) return raw;
+      const phone = normalizePhone(raw);
+      return phone ? `https://wa.me/${phone}` : raw;
+    }
+    return raw;
   }
   function renderFooter() {
     setText('footerSlogan', pageSlogan());
@@ -710,7 +735,7 @@
   const cartStorageKey = `linky_cart_v1_${clean(page.id || page.slug || window.location.pathname).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
   function cartWhatsappLink() {
-    return links.find(link => link.type === 'whatsapp' && buildWhatsAppUrl(link.url, ''));
+    return links.find(link => link.type === 'whatsapp' && link.is_primary === true && buildWhatsAppUrl(link.url, ''));
   }
 
   function safeLoadCart() {

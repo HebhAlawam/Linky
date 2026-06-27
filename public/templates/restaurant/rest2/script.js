@@ -483,8 +483,9 @@
     input.style.opacity = '0';
     document.body.appendChild(input);
     input.select();
-    document.execCommand('copy');
+    const copied = document.execCommand('copy');
     input.remove();
+    if (!copied) throw new Error('Clipboard copy failed');
   }
 
   window.shareSite = async function shareSite() {
@@ -689,13 +690,17 @@
     ar: {
       title: 'سلة التسوق', empty: 'سلتك فارغة', clear: 'إفراغ السلة', notes: 'ملاحظات على الطلب',
       add: 'أضف إلى السلة', update: 'تحديث السلة', added: 'تمت الإضافة إلى السلة', updated: 'تم تحديث السلة', view: 'عرض السلة', remove: 'إزالة',
-      total: 'المجموع', submit: 'إرسال الطلب عبر واتساب', unavailable: 'لا توجد وسيلة طلب عبر واتساب متاحة حاليًا.', close: 'إغلاق',
+      total: 'المجموع', submit: 'إرسال الطلب عبر واتساب', copy: 'نسخ تفاصيل الطلب',
+      copyHelp: 'انسخ الطلب وتواصل مع المطعم عبر وسيلة الاتصال المناسبة.', copied: 'تم نسخ تفاصيل الطلب',
+      copyFailed: 'تعذر نسخ الطلب، يرجى المحاولة مرة أخرى.', unavailable: 'لا توجد وسيلة طلب عبر واتساب متاحة حاليًا.', close: 'إغلاق',
       confirmTotal: 'يتم تأكيد المجموع النهائي عبر واتساب.', decrease: 'تقليل الكمية', increase: 'زيادة الكمية', cart: 'فتح سلة التسوق'
     },
     en: {
       title: 'Shopping Cart', empty: 'Your cart is empty', clear: 'Clear cart', notes: 'Order notes',
       add: 'Add to cart', update: 'Update cart', added: 'Added to cart', updated: 'Cart updated', view: 'View cart', remove: 'Remove',
-      total: 'Total', submit: 'Send order via WhatsApp', unavailable: 'WhatsApp ordering is not available right now.', close: 'Close',
+      total: 'Total', submit: 'Send order via WhatsApp', copy: 'Copy order details',
+      copyHelp: 'Copy the order and contact the restaurant using the appropriate contact method.', copied: 'Order details copied',
+      copyFailed: 'Unable to copy the order. Please try again.', unavailable: 'WhatsApp ordering is not available right now.', close: 'Close',
       confirmTotal: 'The final total will be confirmed via WhatsApp.', decrease: 'Decrease quantity', increase: 'Increase quantity', cart: 'Open shopping cart'
     }
   };
@@ -776,6 +781,21 @@
     return label ? `${number} ${label}` : number;
   }
 
+  function ensureCartCopyHelp() {
+    const submit = $('cartSubmit');
+    if (!submit) return null;
+    let helper = $('cartCopyHelp');
+    if (!helper) {
+      helper = document.createElement('p');
+      helper.id = 'cartCopyHelp';
+      helper.className = 'cart-copy-help';
+      helper.setAttribute('role', 'status');
+      helper.setAttribute('aria-live', 'polite');
+      submit.insertAdjacentElement('beforebegin', helper);
+    }
+    return helper;
+  }
+
   function cartRows() {
     return cart.items.map(entry => {
       const item = cartItem(entry.id);
@@ -794,18 +814,17 @@
   }
 
   function renderItemCartActions() {
-    const enabled = Boolean(cartWhatsappLink());
     const control = $('itemQuantityControl');
     const add = $('itemAddToCart');
     const unavailable = $('itemCartUnavailable');
-    if (control) control.hidden = !enabled;
+    if (control) control.hidden = false;
     if (add) {
-      add.hidden = !enabled;
+      add.hidden = false;
       const exists = activeModalItemId && cart.items.some(entry => String(entry.id) === String(activeModalItemId));
       add.textContent = exists ? CART_TEXT[lang].update : CART_TEXT[lang].add;
     }
     if (unavailable) {
-      unavailable.hidden = enabled;
+      unavailable.hidden = true;
       unavailable.textContent = CART_TEXT[lang].unavailable;
     }
     setText('itemQuantity', itemQuantity);
@@ -815,10 +834,10 @@
 
   function renderCart() {
     cleanCart();
-    const enabled = Boolean(cartWhatsappLink());
+    const whatsapp = cartWhatsappLink();
     const trigger = $('cartTrigger');
     if (trigger) {
-      trigger.hidden = !enabled;
+      trigger.hidden = false;
       trigger.setAttribute('aria-label', CART_TEXT[lang].cart);
     }
     const count = cart.items.reduce((sum, entry) => sum + entry.quantity, 0);
@@ -831,7 +850,12 @@
     setText('cartEmpty', CART_TEXT[lang].empty);
     setText('cartClear', CART_TEXT[lang].clear);
     setText('cartNoteLabel', CART_TEXT[lang].notes);
-    setText('cartSubmit', CART_TEXT[lang].submit);
+    setText('cartSubmit', whatsapp ? CART_TEXT[lang].submit : CART_TEXT[lang].copy);
+    const copyHelp = ensureCartCopyHelp();
+    if (copyHelp) {
+      copyHelp.textContent = whatsapp ? '' : CART_TEXT[lang].copyHelp;
+      copyHelp.hidden = Boolean(whatsapp) || cart.items.length === 0;
+    }
     $('cartClose')?.setAttribute('aria-label', CART_TEXT[lang].close);
     const note = $('cartNote');
     if (note && note.value !== cart.note) note.value = cart.note;
@@ -850,7 +874,7 @@
       : total
         ? `${CART_TEXT[lang].total}: ${formattedAmount(total.amount, total.label)}`
         : CART_TEXT[lang].confirmTotal;
-    if ($('cartSubmit')) $('cartSubmit').disabled = !enabled || rows.length === 0;
+    if ($('cartSubmit')) $('cartSubmit').disabled = rows.length === 0;
   }
 
   function changeCartQuantity(id, delta) {
@@ -866,7 +890,7 @@
 
   function addActiveItemToCart() {
     const item = cartItem(activeModalItemId);
-    if (!item || !cartWhatsappLink()) return;
+    if (!item) return;
     const id = String(item.id);
     const existing = cart.items.find(entry => String(entry.id) === id);
     const isUpdate = Boolean(existing);
@@ -881,7 +905,6 @@
   }
 
   function openCart(event) {
-    if (!cartWhatsappLink()) return;
     cartOpener = event?.currentTarget?.id === 'itemViewCart'
       ? $('cartTrigger')
       : event?.currentTarget || document.activeElement;
@@ -903,6 +926,22 @@
     setTimeout(() => { if (!drawer.classList.contains('open')) drawer.hidden = true; }, 200);
     if ($('itemModal')?.getAttribute('aria-hidden') !== 'false') document.body.classList.remove('overflow-hidden');
     cartOpener?.focus?.();
+  }
+
+  async function copyCartOrder() {
+    const helper = ensureCartCopyHelp();
+    try {
+      await copyToClipboard(cartMessage());
+      if (helper) {
+        helper.hidden = false;
+        helper.textContent = CART_TEXT[lang].copied;
+      }
+    } catch (error) {
+      if (helper) {
+        helper.hidden = false;
+        helper.textContent = CART_TEXT[lang].copyFailed;
+      }
+    }
   }
 
   function cartMessage() {
@@ -939,11 +978,15 @@
       if (event.target.closest('[data-cart-plus]')) changeCartQuantity(row.dataset.cartId, 1);
       if (event.target.closest('[data-cart-remove]')) { cart.items = cart.items.filter(item => String(item.id) !== row.dataset.cartId); if (!cart.items.length) cart.note = ''; safeSaveCart(); renderCart(); }
     });
-    $('cartSubmit')?.addEventListener('click', () => {
+    $('cartSubmit')?.addEventListener('click', async () => {
       const whatsapp = cartWhatsappLink();
-      if (!whatsapp || !cart.items.length) return;
-      cart.items.forEach(entry => trackItemOrderClick(entry.id));
-      window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
+      if (!cart.items.length) return;
+      if (whatsapp) {
+        cart.items.forEach(entry => trackItemOrderClick(entry.id));
+        window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
+        return;
+      }
+      await copyCartOrder();
     });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && $('cartDrawer')?.classList.contains('open')) closeCart();

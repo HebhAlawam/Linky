@@ -663,6 +663,8 @@ const CART_TEXT = {
     title: 'سلة التسوق', empty: 'سلتك فارغة', clear: 'إفراغ السلة', notes: 'ملاحظات على الطلب',
     add: 'أضف إلى السلة', update: 'تحديث السلة', added: 'تمت الإضافة إلى السلة', updated: 'تم تحديث السلة', view: 'عرض السلة',
     remove: 'إزالة', total: 'المجموع', submit: 'إرسال الطلب عبر واتساب',
+    copy: 'نسخ تفاصيل الطلب', copyHelp: 'انسخ الطلب وتواصل مع المطعم عبر وسيلة الاتصال المناسبة.',
+    copied: 'تم نسخ تفاصيل الطلب', copyFailed: 'تعذر نسخ الطلب، يرجى المحاولة مرة أخرى.',
     unavailable: 'لا توجد وسيلة طلب عبر واتساب متاحة حاليًا.', close: 'إغلاق',
     confirmTotal: 'يتم تأكيد المجموع النهائي عبر واتساب.',
     decrease: 'تقليل الكمية', increase: 'زيادة الكمية', cart: 'فتح سلة التسوق'
@@ -671,6 +673,8 @@ const CART_TEXT = {
     title: 'Shopping Cart', empty: 'Your cart is empty', clear: 'Clear cart', notes: 'Order notes',
     add: 'Add to cart', update: 'Update cart', added: 'Added to cart', updated: 'Cart updated', view: 'View cart',
     remove: 'Remove', total: 'Total', submit: 'Send order via WhatsApp',
+    copy: 'Copy order details', copyHelp: 'Copy the order and contact the restaurant using the appropriate contact method.',
+    copied: 'Order details copied', copyFailed: 'Unable to copy the order. Please try again.',
     unavailable: 'WhatsApp ordering is not available right now.', close: 'Close',
     confirmTotal: 'The final total will be confirmed via WhatsApp.',
     decrease: 'Decrease quantity', increase: 'Increase quantity', cart: 'Open shopping cart'
@@ -756,6 +760,21 @@ function formattedAmount(amount, label) {
   return label ? `${number} ${label}` : number;
 }
 
+function ensureCartCopyHelp() {
+  const submit = document.getElementById('cartSubmit');
+  if (!submit) return null;
+  let helper = document.getElementById('cartCopyHelp');
+  if (!helper) {
+    helper = document.createElement('p');
+    helper.id = 'cartCopyHelp';
+    helper.className = 'cart-copy-help';
+    helper.setAttribute('role', 'status');
+    helper.setAttribute('aria-live', 'polite');
+    submit.insertAdjacentElement('beforebegin', helper);
+  }
+  return helper;
+}
+
 function cartRows() {
   return cart.items.map(entry => {
     const item = cartItem(entry.id);
@@ -777,18 +796,17 @@ function cartTotal(rows) {
 }
 
 function renderItemCartActions() {
-  const enabled = Boolean(cartWhatsappLink());
   const control = document.getElementById('itemQuantityControl');
   const add = document.getElementById('itemAddToCart');
   const unavailable = document.getElementById('itemCartUnavailable');
-  if (control) control.hidden = !enabled;
+  if (control) control.hidden = false;
   if (add) {
-    add.hidden = !enabled;
+    add.hidden = false;
     const exists = activeDishItem && cart.items.some(entry => String(entry.id) === String(activeDishItem.id));
     add.textContent = exists ? CART_TEXT[lang].update : CART_TEXT[lang].add;
   }
   if (unavailable) {
-    unavailable.hidden = enabled;
+    unavailable.hidden = true;
     unavailable.textContent = CART_TEXT[lang].unavailable;
   }
   setText('itemQuantity', itemQuantity);
@@ -798,11 +816,11 @@ function renderItemCartActions() {
 
 function renderCart() {
   cleanCart();
-  const enabled = Boolean(cartWhatsappLink());
+  const whatsapp = cartWhatsappLink();
   ['cartTrigger', 'cartTriggerMobile'].forEach(id => {
     const trigger = document.getElementById(id);
     if (!trigger) return;
-    trigger.hidden = !enabled;
+    trigger.hidden = false;
     trigger.setAttribute('aria-label', CART_TEXT[lang].cart);
   });
   const count = cart.items.reduce((sum, entry) => sum + entry.quantity, 0);
@@ -816,7 +834,12 @@ function renderCart() {
   setText('cartEmpty', CART_TEXT[lang].empty);
   setText('cartClear', CART_TEXT[lang].clear);
   setText('cartNoteLabel', CART_TEXT[lang].notes);
-  setText('cartSubmit', CART_TEXT[lang].submit);
+  setText('cartSubmit', whatsapp ? CART_TEXT[lang].submit : CART_TEXT[lang].copy);
+  const copyHelp = ensureCartCopyHelp();
+  if (copyHelp) {
+    copyHelp.textContent = whatsapp ? '' : CART_TEXT[lang].copyHelp;
+    copyHelp.hidden = Boolean(whatsapp) || cart.items.length === 0;
+  }
   document.getElementById('cartClose')?.setAttribute('aria-label', CART_TEXT[lang].close);
   const note = document.getElementById('cartNote');
   if (note && note.value !== cart.note) note.value = cart.note;
@@ -844,7 +867,7 @@ function renderCart() {
       ? `${CART_TEXT[lang].total}: ${formattedAmount(total.amount, total.label)}`
       : CART_TEXT[lang].confirmTotal;
   const submit = document.getElementById('cartSubmit');
-  if (submit) submit.disabled = !enabled || rows.length === 0;
+  if (submit) submit.disabled = rows.length === 0;
 }
 
 function changeCartQuantity(id, delta) {
@@ -859,7 +882,7 @@ function changeCartQuantity(id, delta) {
 }
 
 function addActiveItemToCart() {
-  if (!activeDishItem || !cartWhatsappLink()) return;
+  if (!activeDishItem) return;
   const id = String(activeDishItem.id);
   const existing = cart.items.find(entry => String(entry.id) === id);
   const isUpdate = Boolean(existing);
@@ -875,7 +898,6 @@ function addActiveItemToCart() {
 }
 
 function openCart(event) {
-  if (!cartWhatsappLink()) return;
   cartOpener = event?.currentTarget?.id === 'itemViewCart'
     ? document.getElementById('cartTrigger') || document.getElementById('cartTriggerMobile')
     : event?.currentTarget || document.activeElement;
@@ -897,6 +919,22 @@ function closeCart() {
   setTimeout(() => { if (!drawer.classList.contains('open')) drawer.hidden = true; }, 200);
   if (!document.getElementById('dishOverlay')?.classList.contains('open')) document.body.style.overflow = '';
   cartOpener?.focus?.();
+}
+
+async function copyCartOrder() {
+  const helper = ensureCartCopyHelp();
+  try {
+    await copyToClipboard(cartMessage());
+    if (helper) {
+      helper.hidden = false;
+      helper.textContent = CART_TEXT[lang].copied;
+    }
+  } catch (error) {
+    if (helper) {
+      helper.hidden = false;
+      helper.textContent = CART_TEXT[lang].copyFailed;
+    }
+  }
 }
 
 function cartMessage() {
@@ -942,11 +980,15 @@ function initCart() {
     if (event.target.closest('[data-cart-plus]')) changeCartQuantity(row.dataset.cartId, 1);
     if (event.target.closest('[data-cart-remove]')) { cart.items = cart.items.filter(item => String(item.id) !== row.dataset.cartId); if (!cart.items.length) cart.note = ''; safeSaveCart(); renderCart(); }
   });
-  document.getElementById('cartSubmit')?.addEventListener('click', () => {
+  document.getElementById('cartSubmit')?.addEventListener('click', async () => {
     const whatsapp = cartWhatsappLink();
-    if (!whatsapp || !cart.items.length) return;
-    cart.items.forEach(entry => trackItemOrderClick(entry.id));
-    window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
+    if (!cart.items.length) return;
+    if (whatsapp) {
+      cart.items.forEach(entry => trackItemOrderClick(entry.id));
+      window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
+      return;
+    }
+    await copyCartOrder();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && document.getElementById('cartDrawer')?.classList.contains('open')) closeCart();
@@ -989,8 +1031,9 @@ async function copyToClipboard(text) {
   input.style.opacity = '0';
   document.body.appendChild(input);
   input.select();
-  document.execCommand('copy');
+  const copied = document.execCommand('copy');
   input.remove();
+  if (!copied) throw new Error('Clipboard copy failed');
 }
 
 let shareToastTimer = null;

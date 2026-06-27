@@ -628,6 +628,7 @@ button { cursor: pointer; border: none; background: none; font-family: inherit; 
 .cart-note { width: 100%; resize: vertical; padding: 0.8rem; border: 1px solid var(--border); background: var(--bg-card); color: var(--fg); font: inherit; }
 .cart-footer { border-top: 1px solid var(--border); border-bottom: 0; }
 .cart-summary { margin-bottom: 0.8rem; color: var(--fg); font-weight: 600; }
+.cart-copy-help { margin: -0.25rem 0 0.8rem; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
 .cart-submit { width: 100%; min-width: 0; padding: 0.9rem; }
 .cart-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 

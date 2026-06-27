@@ -937,6 +937,7 @@ html[dir="ltr"] .hero-content {
 .cart-note { width: 100%; resize: vertical; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--page); color: inherit; font: inherit; }
 .cart-footer { padding: 18px 20px; border-top: 1px solid var(--line); }
 .cart-summary { margin-bottom: 12px; font-weight: 900; }
+.cart-copy-help { margin: -4px 0 12px; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
 .cart-submit { width: 100%; min-height: 46px; border: 0; border-radius: 999px; background: var(--primary-color); color: #fff; font-weight: 900; cursor: pointer; }
 .cart-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 

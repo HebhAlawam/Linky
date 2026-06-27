@@ -243,6 +243,8 @@ html.dark .linky-signature {
 .dark .cart-note { border-color: #374151; background: #202020; }
 .cart-footer { padding: 18px 20px; border-top: 1px solid #e5e7eb; }
 .cart-summary { margin-bottom: 12px; font-weight: 900; }
+.cart-copy-help { margin: -4px 0 12px; color: #6b7280; font-size: 0.9rem; line-height: 1.5; }
+.dark .cart-copy-help { color: #9ca3af; }
 .cart-submit { width: 100%; min-height: 46px; border: 0; border-radius: 14px; background: var(--primary); color: #fff; font-weight: 900; cursor: pointer; }
 .cart-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width: 480px) {

@@ -590,6 +590,18 @@ function trackItemOrderClick(id) {
   trackPublicClick(`/track/item-order/${encodeURIComponent(id)}`);
 }
 
+function trackCartItemOrderClicks() {
+  [...new Set(cart.items.map(entry => entry.id).filter(Boolean))]
+    .forEach(id => trackItemOrderClick(id));
+}
+
+function trackOrderAttempt(channel) {
+  const pageId = data.page?.id;
+  if (!pageId || !['whatsapp', 'copy'].includes(channel)) return;
+
+  trackPublicClick(`/track/order-attempt/${encodeURIComponent(pageId)}/${encodeURIComponent(channel)}`);
+}
+
 function trackPublicClick(url) {
   const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
@@ -954,6 +966,8 @@ async function copyCartOrder() {
   const helper = ensureCartCopyHelp();
   try {
     await copyToClipboard(cartMessage());
+    trackOrderAttempt('copy');
+    trackCartItemOrderClicks();
     if (helper) {
       helper.hidden = false;
       helper.textContent = CART_TEXT[lang].copied;
@@ -1013,7 +1027,8 @@ function initCart() {
     const whatsapp = cartWhatsappLink();
     if (!cart.items.length) return;
     if (whatsapp) {
-      cart.items.forEach(entry => trackItemOrderClick(entry.id));
+      trackOrderAttempt('whatsapp');
+      trackCartItemOrderClicks();
       window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
       return;
     }

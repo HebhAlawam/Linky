@@ -711,6 +711,18 @@
     if (id) trackPublicClick(`/track/item-order/${id}`);
   }
 
+  function trackCartItemOrderClicks() {
+    [...new Set(cart.items.map(entry => entry.id).filter(Boolean))]
+      .forEach(id => trackItemOrderClick(id));
+  }
+
+  function trackOrderAttempt(channel) {
+    const pageId = page.id;
+    if (!pageId || !['whatsapp', 'copy'].includes(channel)) return;
+
+    trackPublicClick(`/track/order-attempt/${encodeURIComponent(pageId)}/${encodeURIComponent(channel)}`);
+  }
+
   const CART_TEXT = {
     ar: {
       title: 'سلة التسوق', empty: 'سلتك فارغة', clear: 'إفراغ السلة', notes: 'ملاحظات على الطلب',
@@ -957,6 +969,8 @@
     const helper = ensureCartCopyHelp();
     try {
       await copyToClipboard(cartMessage());
+      trackOrderAttempt('copy');
+      trackCartItemOrderClicks();
       if (helper) {
         helper.hidden = false;
         helper.textContent = CART_TEXT[lang].copied;
@@ -1007,7 +1021,8 @@
       const whatsapp = cartWhatsappLink();
       if (!cart.items.length) return;
       if (whatsapp) {
-        cart.items.forEach(entry => trackItemOrderClick(entry.id));
+        trackOrderAttempt('whatsapp');
+        trackCartItemOrderClicks();
         window.open(buildWhatsAppUrl(whatsapp.url, cartMessage()), '_blank', 'noopener');
         return;
       }

@@ -82,7 +82,6 @@
     <div class="card-body">
         <h3 class="card-title mb-1">اختيار القالب</h3>
         <p class="text-secondary mb-3">يمكنك تغيير شكل موقعك دون فقدان المحتوى.</p>
-        <div class="form-hint mb-3">صور معاينة القوالب يفضل أن تكون طويلة مثل 1080×1920 بكسل.</div>
         <div class="row g-3 mb-4" id="templateCards">
             @foreach ($templates as $key => $template)
                 @php
@@ -135,7 +134,9 @@
                 <div class="col-md-4">
                     <label class="form-label" for="hero_image_{{ $i }}">صورة الواجهة {{ $i }}</label>
                     <input type="file" id="hero_image_{{ $i }}" name="hero_image_{{ $i }}" accept="image/*" class="form-control @error($field) is-invalid @enderror">
-                    <div class="form-hint">الحد الأقصى 8MB. الصيغ المدعومة: JPG, PNG, WEBP. تُحسّن الصورة تلقائيًا للويب، والمقاس المفضل 1920×1080 بنسبة 16:9.</div>
+                    <div class="form-hint">الحد الأقصى 8MB. الصيغ المدعومة: JPG, PNG, WEBP. تُحسّن الصورة تلقائيًا للويب،
+                        والمقاس المفضل 1920 × 850 بكسل .
+                    </div>
                     @error($field)<div class="invalid-feedback">{{ $message }}</div>@enderror
 
                     @if ($currentHero)
@@ -152,16 +153,16 @@
             @endfor
         </div>
 
-        <h3 class="card-title mb-3">الموقع ومواعيد العمل</h3>
+        <h3 class="card-title mb-3">العنوان ومواعيد العمل</h3>
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label" for="address_ar">الموقع بالعربي</label>
+                <label class="form-label" for="address_ar">العنوان بالعربي</label>
                 <textarea id="address_ar" name="address_ar" rows="3" class="form-control @error('address_ar') is-invalid @enderror">{{ old('address_ar', $address['ar'] ?? '') }}</textarea>
                 @error('address_ar')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
             <div class="col-md-6">
-                <label class="form-label" for="address_en">الموقع بالإنكليزي</label>
+                <label class="form-label" for="address_en">العنوان بالإنكليزي</label>
                 <textarea id="address_en" name="address_en" rows="3" class="form-control @error('address_en') is-invalid @enderror" dir="ltr">{{ old('address_en', $address['en'] ?? '') }}</textarea>
                 @error('address_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>

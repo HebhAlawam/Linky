@@ -86,5 +86,6 @@ require __DIR__.'/auth.php';
 
 Route::post('/track/link/{link}', [PublicTrackingController::class, 'link'])->name('track.link');
 Route::post('/track/item-order/{item}', [PublicTrackingController::class, 'itemOrder'])->name('track.item-order');
+Route::post('/track/order-attempt/{page}/{channel}', [PublicTrackingController::class, 'orderAttempt'])->name('track.order-attempt');
 
 Route::get('/{slug}', [PublicPageController::class, 'show'])->name('public.show');

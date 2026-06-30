@@ -41,8 +41,17 @@ class StatsController extends Controller
                 'visits' => (int) ($stat?->visits ?? 0),
                 'link_clicks' => (int) ($stat?->link_clicks ?? 0),
                 'item_clicks' => (int) ($stat?->item_clicks ?? 0),
+                'whatsapp_order_attempts' => (int) ($stat?->whatsapp_order_attempts ?? 0),
+                'copied_order_attempts' => (int) ($stat?->copied_order_attempts ?? 0),
             ];
         });
+
+        $whatsappOrderAttempts = (int) PageDailyStat::query()
+            ->where('page_id', $page->id)
+            ->sum('whatsapp_order_attempts');
+        $copiedOrderAttempts = (int) PageDailyStat::query()
+            ->where('page_id', $page->id)
+            ->sum('copied_order_attempts');
 
         $summary = [
             'today_visits' => (int) PageDailyStat::query()
@@ -56,9 +65,8 @@ class StatsController extends Controller
             'link_clicks' => (int) Link::query()
                 ->where('page_id', $page->id)
                 ->sum('clicks'),
-            'order_clicks' => (int) Item::query()
-                ->where('page_id', $page->id)
-                ->sum('clicks'),
+            'whatsapp_order_attempts' => $whatsappOrderAttempts,
+            'copied_order_attempts' => $copiedOrderAttempts,
         ];
 
         $topItems = Item::query()

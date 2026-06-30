@@ -35,6 +35,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--tblr-secondary);
+    text-align: end;
   }
   .linky-link-actions {
     flex-wrap: wrap;
@@ -97,6 +98,7 @@
         <div class="row g-3">
             @foreach ($fixedSlots as $slot)
                 @php($link = $slot['link'])
+                @php($isWhatsappOrdersSlot = $slot['type'] === 'whatsapp_orders')
                 <div class="col-md-6 col-xl-4">
                     <div class="linky-link-slot {{ $link ? '' : 'is-empty' }}">
                         <div class="d-flex gap-3 align-items-start">
@@ -104,7 +106,10 @@
                                 <i class="{{ $link?->icon ?: $slot['icon'] }}"></i>
                             </span>
                             <div class="flex-fill min-w-0">
-                                <div class="fw-bold">{{ $link ? $displayTitle($link, $slot['label']) : $slot['label'] }}</div>
+                                <div class="fw-bold">{{ $isWhatsappOrdersSlot ? 'واتساب الطلبات' : ($link ? $displayTitle($link, $slot['label']) : $slot['label']) }}</div>
+                                @if ($isWhatsappOrdersSlot)
+                                    <div class="text-secondary small">يُستخدم لإرسال طلبات السلة مباشرة.</div>
+                                @endif
                                 @if ($link)
                                     <a href="{{ $link->url }}" target="_blank" rel="noopener" class="linky-link-url linky-link-value small text-decoration-underline" dir="ltr" title="{{ $link->url }}">
                                         {{ $displayUrl($link) }}

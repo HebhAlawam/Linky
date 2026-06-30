@@ -111,7 +111,7 @@
             </div>
 
             <div class="col-md-6">
-                <label class="form-label" for="logo">الشعار</label>
+                <label class="form-label" for="logo">الشعار (اللوغو)</label>
                 <input type="file" id="logo" name="logo" accept="image/*" class="form-control @error('logo') is-invalid @enderror">
                 <div class="form-hint">الحد الأقصى 2MB. الصيغ المدعومة: JPG, PNG, WEBP, SVG. تُحسّن الصور النقطية تلقائيًا، ويدعم SVG كما هو. المقاس المفضل: 600×600 بكسل.</div>
                 @error('logo')<div class="invalid-feedback">{{ $message }}</div>@enderror

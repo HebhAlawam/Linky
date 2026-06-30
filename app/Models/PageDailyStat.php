@@ -15,6 +15,8 @@ class PageDailyStat extends Model
         'item_views',
         'item_clicks',
         'link_clicks',
+        'whatsapp_order_attempts',
+        'copied_order_attempts',
     ];
 
     protected $casts = [
@@ -24,6 +26,8 @@ class PageDailyStat extends Model
         'item_views' => 'integer',
         'item_clicks' => 'integer',
         'link_clicks' => 'integer',
+        'whatsapp_order_attempts' => 'integer',
+        'copied_order_attempts' => 'integer',
     ];
 
     public function page()
@@ -38,10 +42,14 @@ class PageDailyStat extends Model
 
     public static function forToday(int $pageId): self
     {
-        return self::firstOrCreate([
-            'page_id' => $pageId,
-            'date' => now()->toDateString(),
-        ]);
+        return self::query()
+            ->where('page_id', $pageId)
+            ->whereDate('date', now()->toDateString())
+            ->first()
+            ?? self::query()->create([
+                'page_id' => $pageId,
+                'date' => now()->toDateString(),
+            ]);
     }
 
     public function recordVisit(bool $unique = false): void
@@ -51,5 +59,13 @@ class PageDailyStat extends Model
         if ($unique) {
             $this->increment('unique_visits');
         }
+    }
+
+    public function recordOrderAttempt(string $channel): void
+    {
+        match ($channel) {
+            'whatsapp' => $this->increment('whatsapp_order_attempts'),
+            'copy' => $this->increment('copied_order_attempts'),
+        };
     }
 }

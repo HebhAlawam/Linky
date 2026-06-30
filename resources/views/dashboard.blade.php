@@ -137,7 +137,7 @@
                 </a>
                 <a href="{{ route('dashboard.items.create') }}" class="btn btn-outline-primary">
                     <i class="ti ti-plus ms-2"></i>
-                    إضافة عنصر
+                    إضافة منتج
                 </a>
                 <a href="{{ route('dashboard.links.create') }}" class="btn btn-outline-primary">
                     <i class="ti ti-plus ms-2"></i>
